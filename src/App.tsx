@@ -84,7 +84,7 @@ export const App = () => {
 
       <Box as="header" flexShrink={0} position="relative" zIndex={1}>
         <ContentContainer>
-          <Box py={4}>
+          <Box pt={6} pb={4}>
             <Flex align="center" gap={4}>
               <HStack flex="1" gap={3} align="center" minW={0}>
                 <Stack gap={0} align="center">

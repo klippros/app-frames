@@ -10,7 +10,11 @@ export interface ToolbarIconButtonProps {
   tone?: 'default' | 'destructive'
 }
 
-const resolveToggleOpacity = (ariaPressed: boolean | undefined): number => {
+const resolveOpacity = (disabled: boolean, ariaPressed: boolean | undefined): number => {
+  if (disabled) {
+    return 0.45
+  }
+
   if (ariaPressed === undefined) {
     return 1
   }
@@ -31,7 +35,7 @@ export const ToolbarIconButton = ({
     aria-pressed={ariaPressed}
     disabled={disabled}
     tone={tone}
-    opacity={resolveToggleOpacity(ariaPressed)}
+    opacity={resolveOpacity(disabled, ariaPressed)}
     cursor={disabled ? 'not-allowed' : undefined}
     onClick={onClick}
   >
