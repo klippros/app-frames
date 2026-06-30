@@ -1,2 +1,6 @@
 - Immediately before commiting run `pnpm format --write`
 - When creating or amending git commits, follow the `git-commit-messages` skill.
+- Prefer **named exports** over default exports for components, functions, types, and constants.
+- Put **one React component per file**. If a component needs helpers, create a directory named after the main component (e.g. `ExportAssetsModal/`), keep the main component in `<Name>/<Name>.tsx`, and add support components as sibling files in that directory.
+- Define React components as **arrow functions** (`export const MyComponent = () => ...`), not `function` declarations.
+- When a component body is only a `return`, use an **implicit return** (`() => (...)`) instead of a block with `return`.
