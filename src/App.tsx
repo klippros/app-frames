@@ -96,7 +96,7 @@ export const App = () => {
                     fontFamily="'Archivo Black', sans-serif"
                     fontWeight="normal"
                   >
-                    App Framer
+                    App Frames
                   </Heading>
                   <Text
                     fontSize="sm"

@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# App Frames
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A simple browser-based tool that turns in-app screenshots into App Store and Google Play marketing assets. No account, no backend — upload, customize, export.
 
-Currently, two official plugins are available:
+## How it works
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Upload one or more screenshots
+2. Preview framed assets (toggle iOS / Android preview)
+3. Customize per frame (title, position, replace, reorder) and globally (gradient hue, device bezel)
+4. Export a ZIP of store-sized JPEGs
 
-## React Compiler
+## Privacy
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+All processing happens in the browser. Your screenshots never leave your device.
 
-## Expanding the Oxlint configuration
+## Development
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Prerequisites: Node.js, pnpm 10+.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm install
+pnpm dev      # http://localhost:5173
+pnpm build
+pnpm preview
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Contributing
+
+See [AGENTS.md](AGENTS.md) for project conventions.
+
+---
+
+© 2026 Klippros Studios AB · [GitHub](https://github.com/klippros/app-frames)
