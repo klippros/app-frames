@@ -1,0 +1,2 @@
+- Immediately before commiting run `pnpm format --write`
+- When creating or amending git commits, follow the `git-commit-messages` skill.
