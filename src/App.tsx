@@ -1,8 +1,10 @@
-import { Box, Flex, Heading } from '@chakra-ui/react'
-import { useEffect, useMemo, useState } from 'react'
+import { Box, Flex, Heading, HStack, Stack, Text } from '@chakra-ui/react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ContentContainer } from './components/ContentContainer'
 import { ExportAssetsModal } from './components/ExportAssetsModal/ExportAssetsModal'
 import { HeaderToolbar } from './components/HeaderToolbar'
+import { PlatformToggle } from './components/PlatformToggle'
+import { ScreenshotFileInput, type ScreenshotFileInputHandle } from './components/ScreenshotFileInput'
 import { useBeforeUnload } from './hooks/useBeforeUnload'
 import { ScreenshotWorkspace } from './components/ScreenshotWorkspace'
 import type { Platform, Screenshot } from './types'
@@ -14,6 +16,7 @@ export const App = () => {
   const [platform, setPlatform] = useState<Platform>('ios')
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [gradientBaseColor, setGradientBaseColor] = useState(featureGraphicGradient.baseColor)
+  const addScreenshotsInputRef = useRef<ScreenshotFileInputHandle>(null)
 
   const gradientConfig = useMemo(
     () => ({
@@ -37,6 +40,10 @@ export const App = () => {
       URL.revokeObjectURL(screenshot.url)
     }
     setScreenshots(nextScreenshots)
+  }
+
+  const handleAddScreenshots = (nextScreenshots: Screenshot[]) => {
+    setScreenshots((prev) => [...prev, ...nextScreenshots])
   }
 
   const handleExport = async (selectedFormatIds: string[]) => {
@@ -91,19 +98,36 @@ export const App = () => {
         <ContentContainer>
           <Box py={4}>
             <Flex align="center" justify="space-between" gap={4}>
-              <Heading size="lg" fontWeight="semibold">
-                App Framer
-              </Heading>
+              <HStack gap={3} align="center">
+                <Stack gap={0} align="center">
+                  <Heading
+                    size="3xl"
+                    lineHeight="1"
+                    fontFamily="'Archivo Black', sans-serif"
+                    fontWeight="normal"
+                  >
+                    App Framer
+                  </Heading>
+                  <Text fontSize="sm" fontWeight="semibold" lineHeight="1.4" textAlign="center">
+                    Klippros Studios
+                  </Text>
+                </Stack>
+                <PlatformToggle platform={platform} onChange={setPlatform} />
+              </HStack>
               {hasScreenshots ? (
-                <HeaderToolbar
-                  platform={platform}
-                  gradientBaseColor={gradientBaseColor}
-                  onPlatformChange={setPlatform}
-                  onGradientBaseColorChange={setGradientBaseColor}
-                  onExportClick={() => {
-                    setExportModalOpen(true)
-                  }}
-                />
+                <>
+                  <ScreenshotFileInput ref={addScreenshotsInputRef} onSelect={handleAddScreenshots} />
+                  <HeaderToolbar
+                    gradientBaseColor={gradientBaseColor}
+                    onGradientBaseColorChange={setGradientBaseColor}
+                    onAddScreenshotsClick={() => {
+                      addScreenshotsInputRef.current?.open()
+                    }}
+                    onExportClick={() => {
+                      setExportModalOpen(true)
+                    }}
+                  />
+                </>
               ) : null}
             </Flex>
           </Box>
