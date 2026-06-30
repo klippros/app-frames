@@ -4,15 +4,17 @@ import type { Platform } from '../types'
 import { ToolbarIconButton } from './ToolbarIconButton'
 
 export interface PlatformToggleProps {
+  disabled?: boolean
   platform: Platform
   onChange: (platform: Platform) => void
 }
 
-export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
+export const PlatformToggle = ({ disabled = false, platform, onChange }: PlatformToggleProps) => (
   <>
     <ToolbarIconButton
       aria-label="Show iOS previews"
       aria-pressed={platform === 'ios'}
+      disabled={disabled}
       variant={platform === 'ios' ? 'solid' : 'outline'}
       onClick={() => {
         onChange('ios')
@@ -23,6 +25,7 @@ export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
     <ToolbarIconButton
       aria-label="Show Android previews"
       aria-pressed={platform === 'android'}
+      disabled={disabled}
       variant={platform === 'android' ? 'solid' : 'outline'}
       onClick={() => {
         onChange('android')

@@ -11,13 +11,14 @@ import {
 
 export interface GradientHueSelectorProps {
   baseColor: string
+  disabled?: boolean
   onChange: (baseColor: string) => void
 }
 
 const HUE_GRADIENT =
   'linear-gradient(to right, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(359 100% 50%))'
 
-export const GradientHueSelector = ({ baseColor, onChange }: GradientHueSelectorProps) => {
+export const GradientHueSelector = ({ baseColor, disabled = false, onChange }: GradientHueSelectorProps) => {
   const [hue, setHue] = useState(() => hueFromHex(baseColor) ?? getDefaultGradientHue())
   const [hexInput, setHexInput] = useState(baseColor)
 
@@ -46,12 +47,16 @@ export const GradientHueSelector = ({ baseColor, onChange }: GradientHueSelector
   return (
     <Flex
       align="center"
+      aria-disabled={disabled}
       borderColor="border"
       borderRadius="full"
       borderWidth="1px"
+      cursor={disabled ? 'not-allowed' : undefined}
       gap={3}
       h={toolbarControlHeight}
       maxW="320px"
+      opacity={disabled ? 0.45 : undefined}
+      pointerEvents={disabled ? 'none' : undefined}
       px={3}
     >
       <Box position="relative" flex="1" minW="140px" display="flex" alignItems="center">
@@ -61,6 +66,7 @@ export const GradientHueSelector = ({ baseColor, onChange }: GradientHueSelector
           max={360}
           step={1}
           value={hue}
+          disabled={disabled}
           onChange={(event) => {
             handleHueChange(Number(event.currentTarget.value))
           }}
@@ -84,6 +90,7 @@ export const GradientHueSelector = ({ baseColor, onChange }: GradientHueSelector
       </Box>
       <Input
         value={hexInput}
+        disabled={disabled}
         onChange={(event) => {
           setHexInput(event.currentTarget.value)
         }}

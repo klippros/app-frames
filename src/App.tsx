@@ -48,8 +48,8 @@ export const App = () => {
       <Box as="header" borderBottomWidth="1px" borderColor="border" flexShrink={0}>
         <ContentContainer>
           <Box py={4}>
-            <Flex align="center" justify="space-between" gap={4}>
-              <HStack gap={3} align="center">
+            <Flex align="center" gap={4}>
+              <HStack flex="1" gap={3} align="center" minW={0}>
                 <Stack gap={0} align="center">
                   <Heading
                     size="3xl"
@@ -63,27 +63,32 @@ export const App = () => {
                     Klippros Studios
                   </Text>
                 </Stack>
-                <PlatformToggle platform={platform} onChange={setPlatform} />
               </HStack>
-              {hasScreenshots ? (
-                <>
-                  <ScreenshotFileInput
-                    ref={addScreenshotsInputRef}
-                    existingScreenshotCount={screenshots.length}
-                    onSelect={addScreenshots}
-                  />
-                  <HeaderToolbar
-                    gradientBaseColor={gradientBaseColor}
-                    onGradientBaseColorChange={setGradientBaseColor}
-                    onAddScreenshotsClick={() => {
-                      addScreenshotsInputRef.current?.open()
-                    }}
-                    onExportClick={() => {
-                      setExportModalOpen(true)
-                    }}
-                  />
-                </>
-              ) : null}
+              <HStack flexShrink={0} gap={2} justify="center">
+                <PlatformToggle
+                  disabled={!hasScreenshots}
+                  platform={platform}
+                  onChange={setPlatform}
+                />
+              </HStack>
+              <HStack flex="1" gap={2} align="center" justify="flex-end" minW={0}>
+                <ScreenshotFileInput
+                  ref={addScreenshotsInputRef}
+                  existingScreenshotCount={screenshots.length}
+                  onSelect={addScreenshots}
+                />
+                <HeaderToolbar
+                  disabled={!hasScreenshots}
+                  gradientBaseColor={gradientBaseColor}
+                  onGradientBaseColorChange={setGradientBaseColor}
+                  onAddScreenshotsClick={() => {
+                    addScreenshotsInputRef.current?.open()
+                  }}
+                  onExportClick={() => {
+                    setExportModalOpen(true)
+                  }}
+                />
+              </HStack>
             </Flex>
           </Box>
         </ContentContainer>

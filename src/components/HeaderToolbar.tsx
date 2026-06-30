@@ -5,6 +5,7 @@ import { GradientHueSelector } from './GradientHueSelector'
 import { ToolbarIconButton } from './ToolbarIconButton'
 
 export interface HeaderToolbarProps {
+  disabled?: boolean
   gradientBaseColor: string
   onGradientBaseColorChange: (baseColor: string) => void
   onAddScreenshotsClick: () => void
@@ -12,17 +13,26 @@ export interface HeaderToolbarProps {
 }
 
 export const HeaderToolbar = ({
+  disabled = false,
   gradientBaseColor,
   onGradientBaseColorChange,
   onAddScreenshotsClick,
   onExportClick,
 }: HeaderToolbarProps) => (
   <HStack gap={2}>
-    <GradientHueSelector baseColor={gradientBaseColor} onChange={onGradientBaseColorChange} />
-    <ToolbarIconButton aria-label="Add screenshots" onClick={onAddScreenshotsClick}>
+    <GradientHueSelector
+      baseColor={gradientBaseColor}
+      disabled={disabled}
+      onChange={onGradientBaseColorChange}
+    />
+    <ToolbarIconButton
+      aria-label="Add screenshots"
+      disabled={disabled}
+      onClick={onAddScreenshotsClick}
+    >
       <FontAwesomeIcon icon={faPlus} />
     </ToolbarIconButton>
-    <ToolbarIconButton aria-label="Export assets" onClick={onExportClick}>
+    <ToolbarIconButton aria-label="Export assets" disabled={disabled} onClick={onExportClick}>
       <FontAwesomeIcon icon={faDownload} />
     </ToolbarIconButton>
   </HStack>
