@@ -6,8 +6,10 @@ import type { ExportFormat, TitlePosition } from '../../types'
 import type { GradientConfig } from '../../utils/featureGraphicConfig'
 import { DeleteFrameDialog } from '../DeleteFrameDialog/DeleteFrameDialog'
 import { FrameCanvas } from '../FrameCanvas'
-import { ToolbarIconButton } from '../ToolbarIconButton'
+import { ToolbarIconButton, toolbarControlHeight } from '../ToolbarIconButton'
 import { FrameTitleOverlay } from './FrameTitleOverlay'
+
+const frameActionsRightOffset = `calc(${toolbarControlHeight} / 2 + var(--chakra-spacing-2))`
 
 export interface ScreenshotFrameProps {
   screenshotUrl: string
@@ -86,28 +88,12 @@ export const ScreenshotFrame = ({
     setIsEditing(false)
   }
 
+  const handleOpenDeleteDialog = () => {
+    setDeleteDialogOpen(true)
+  }
+
   return (
-    <Box flexShrink={0}>
-      <HStack justify="center" gap={2} mb={2}>
-        <ToolbarIconButton
-          aria-label="Toggle title position"
-          aria-pressed={titlePosition === 'bottom'}
-          onClick={onToggleTitlePosition}
-        >
-          <FontAwesomeIcon icon={faTextHeight} />
-        </ToolbarIconButton>
-        <ToolbarIconButton aria-label="Replace screenshot" onClick={handleReplaceClick}>
-          <FontAwesomeIcon icon={faImage} />
-        </ToolbarIconButton>
-        <ToolbarIconButton
-          aria-label="Delete screenshot"
-          onClick={() => {
-            setDeleteDialogOpen(true)
-          }}
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </ToolbarIconButton>
-      </HStack>
+    <Box flexShrink={0} position="relative">
       <DeleteFrameDialog
         open={deleteDialogOpen}
         fileName={fileName}
@@ -146,6 +132,30 @@ export const ScreenshotFrame = ({
           onTitleChange={onTitleChange}
           onEditEnd={handleEditEnd}
         />
+      </Box>
+      <HStack
+        gap={2}
+        position="absolute"
+        right={frameActionsRightOffset}
+        top={0}
+        transform="translateY(-50%)"
+        zIndex={2}
+      >
+        <ToolbarIconButton
+          aria-label="Toggle title position"
+          aria-pressed={titlePosition === 'bottom'}
+          onClick={onToggleTitlePosition}
+        >
+          <FontAwesomeIcon icon={faTextHeight} />
+        </ToolbarIconButton>
+        <ToolbarIconButton aria-label="Replace screenshot" onClick={handleReplaceClick}>
+          <FontAwesomeIcon icon={faImage} />
+        </ToolbarIconButton>
+      </HStack>
+      <Box position="absolute" right={0} top={0} transform="translate(50%, -50%)" zIndex={2}>
+        <ToolbarIconButton aria-label="Delete screenshot" onClick={handleOpenDeleteDialog}>
+          <FontAwesomeIcon icon={faTrash} />
+        </ToolbarIconButton>
       </Box>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
     </Box>

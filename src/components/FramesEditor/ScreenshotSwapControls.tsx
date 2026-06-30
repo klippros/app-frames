@@ -8,7 +8,7 @@ export interface ScreenshotSwapControlsProps {
 }
 
 export const ScreenshotSwapControls = ({ onSwap }: ScreenshotSwapControlsProps) => (
-  <Flex align="center" alignSelf="center" flexShrink={0} px={2}>
+  <Flex align="center" alignSelf="center" flexShrink={0} px={4}>
     <ToolbarIconButton aria-label="Swap screenshots" onClick={onSwap}>
       <FontAwesomeIcon icon={faArrowRightArrowLeft} />
     </ToolbarIconButton>
