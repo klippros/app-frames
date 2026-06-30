@@ -47,6 +47,7 @@ export const FramesEditor = ({
           <Fragment key={screenshot.id}>
             <ScreenshotFrame
               screenshotUrl={screenshot.url}
+              fileName={screenshot.file.name}
               format={format}
               gradientConfig={gradientConfig}
               title={screenshot.title}

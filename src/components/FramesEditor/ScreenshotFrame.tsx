@@ -4,12 +4,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useEffect, useRef, useState } from 'react'
 import type { ExportFormat, TitlePosition } from '../../types'
 import type { GradientConfig } from '../../utils/featureGraphicConfig'
+import { DeleteFrameDialog } from '../DeleteFrameDialog/DeleteFrameDialog'
 import { FrameCanvas } from '../FrameCanvas'
 import { ToolbarIconButton } from '../ToolbarIconButton'
 import { FrameTitleOverlay } from './FrameTitleOverlay'
 
 export interface ScreenshotFrameProps {
   screenshotUrl: string
+  fileName: string
   format: ExportFormat
   gradientConfig: GradientConfig
   title: string
@@ -22,6 +24,7 @@ export interface ScreenshotFrameProps {
 
 export const ScreenshotFrame = ({
   screenshotUrl,
+  fileName,
   format,
   gradientConfig,
   title,
@@ -35,6 +38,7 @@ export const ScreenshotFrame = ({
   const previewRef = useRef<HTMLDivElement>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [canvasWidth, setCanvasWidth] = useState(format.width)
 
   useEffect(() => {
@@ -95,10 +99,21 @@ export const ScreenshotFrame = ({
         <ToolbarIconButton aria-label="Replace screenshot" onClick={handleReplaceClick}>
           <FontAwesomeIcon icon={faImage} />
         </ToolbarIconButton>
-        <ToolbarIconButton aria-label="Delete screenshot" onClick={onDelete}>
+        <ToolbarIconButton
+          aria-label="Delete screenshot"
+          onClick={() => {
+            setDeleteDialogOpen(true)
+          }}
+        >
           <FontAwesomeIcon icon={faTrash} />
         </ToolbarIconButton>
       </HStack>
+      <DeleteFrameDialog
+        open={deleteDialogOpen}
+        fileName={fileName}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={onDelete}
+      />
       <Box
         ref={previewRef}
         borderRadius="14px"
