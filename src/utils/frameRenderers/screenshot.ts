@@ -20,12 +20,7 @@ export async function drawStoreScreenshot(
   gradientConfig: GradientConfig = featureGraphicGradient,
   options: StoreScreenshotOptions = {},
 ) {
-  const {
-    title = '',
-    titlePosition = 'top',
-    drawTitle = true,
-    renderer,
-  } = options
+  const { title = '', titlePosition = 'top', drawTitle = true, renderer } = options
 
   drawRadialBackground(ctx, { width, height }, gradientConfig)
 

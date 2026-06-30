@@ -4,7 +4,6 @@ import type { ExportFormat, TitlePosition } from '../../types'
 import {
   constrainTitleInput,
   getFrameLayout,
-  getTitleBlockOffset,
   layoutTitleLines,
   MAX_LINES,
   TITLE_COLOR,
@@ -21,6 +20,8 @@ export interface FrameTitleOverlayProps {
   onTitleChange: (title: string) => void
   onEditEnd: () => void
 }
+
+const HOVER_FONT_SCALE = 1.06
 
 export const FrameTitleOverlay = ({
   title,
@@ -40,14 +41,15 @@ export const FrameTitleOverlay = ({
   )
 
   const scale = canvasWidth / format.width
-  const scaledFontSize = layout.fontSize * scale
+  const hoverFontScale = isHovered && !isEditing ? HOVER_FONT_SCALE : 1
+  const scaledFontSize = layout.fontSize * scale * hoverFontScale
   const scaledLineHeight = layout.lineHeight * scale
+  const horizontalPadding = layout.textHorizontalPadding * scale
   const displayLines = useMemo(
     () => layoutTitleLines(title, layout.maxTextWidth, layout.fontSize),
     [layout.fontSize, layout.maxTextWidth, title],
   )
-  const blockOffsetY =
-    getTitleBlockOffset(layout.textContentArea, displayLines.length, layout.lineHeight) * scale
+  const displayText = displayLines.map((line) => line || '\u00A0').join('\n')
   const textAreaTop = layout.textContentArea.y * scale
   const textAreaHeight = layout.textContentArea.height * scale
 
@@ -67,6 +69,7 @@ export const FrameTitleOverlay = ({
     width: '100%',
     whiteSpace: 'pre' as const,
     overflow: 'hidden' as const,
+    transition: 'font-size 150ms ease',
   }
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -93,6 +96,9 @@ export const FrameTitleOverlay = ({
 
   return (
     <Box
+      alignItems="center"
+      display="flex"
+      justifyContent="center"
       left={0}
       pointerEvents={isEditing ? 'auto' : 'none'}
       position="absolute"
@@ -101,64 +107,45 @@ export const FrameTitleOverlay = ({
       w="100%"
       zIndex={1}
     >
-      <Box
-        left={0}
-        position="absolute"
-        top={`${blockOffsetY - textAreaTop}px`}
-        transform={isHovered && !isEditing ? 'scale(1.06)' : 'scale(1)'}
-        transition="transform 150ms ease"
-        transformOrigin="center center"
-        w="100%"
-      >
-        {isEditing ? (
-          <textarea
-            ref={textareaRef}
-            rows={Math.min(displayLines.length, MAX_LINES)}
-            value={title}
-            onBlur={onEditEnd}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onPaste={(event) => {
-              event.preventDefault()
-              const pasted = event.clipboardData.getData('text')
-              const textarea = textareaRef.current
-              if (!textarea) {
-                return
-              }
+      {isEditing ? (
+        <textarea
+          ref={textareaRef}
+          rows={Math.min(displayLines.length, MAX_LINES)}
+          value={title}
+          onBlur={onEditEnd}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={(event) => {
+            event.preventDefault()
+            const pasted = event.clipboardData.getData('text')
+            const textarea = textareaRef.current
+            if (!textarea) {
+              return
+            }
 
-              const start = textarea.selectionStart
-              const end = textarea.selectionEnd
-              const merged = `${title.slice(0, start)}${pasted}${title.slice(end)}`
-              onTitleChange(
-                constrainTitleInput(merged, layout.maxTextWidth, layout.fontSize, title),
-              )
-            }}
-            style={{
-              ...sharedTextStyle,
-              background: 'transparent',
-              border: 'none',
-              display: 'block',
-              margin: 0,
-              minHeight: `${displayLines.length * scaledLineHeight}px`,
-              outline: 'none',
-              padding: `0 ${layout.textHorizontalPadding * scale}px`,
-              resize: 'none',
-            }}
-          />
-        ) : (
-          <Box
-            aria-hidden
-            px={`${layout.textHorizontalPadding * scale}px`}
-            {...sharedTextStyle}
-          >
-            {displayLines.map((line, index) => (
-              <Box key={`${index}-${line}`} h={`${scaledLineHeight}px`}>
-                {line || '\u00A0'}
-              </Box>
-            ))}
-          </Box>
-        )}
-      </Box>
+            const start = textarea.selectionStart
+            const end = textarea.selectionEnd
+            const merged = `${title.slice(0, start)}${pasted}${title.slice(end)}`
+            onTitleChange(constrainTitleInput(merged, layout.maxTextWidth, layout.fontSize, title))
+          }}
+          style={{
+            ...sharedTextStyle,
+            background: 'transparent',
+            border: 'none',
+            display: 'block',
+            margin: 0,
+            minHeight: `${displayLines.length * scaledLineHeight}px`,
+            outline: 'none',
+            padding: `0 ${horizontalPadding}px`,
+            resize: 'none',
+            transition: undefined,
+          }}
+        />
+      ) : (
+        <Box aria-hidden px={`${horizontalPadding}px`} {...sharedTextStyle}>
+          {displayText}
+        </Box>
+      )}
     </Box>
   )
 }

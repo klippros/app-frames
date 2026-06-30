@@ -243,11 +243,7 @@ function wrapSegment(
   }
 }
 
-function layoutTitleLinesInternal(
-  rawText: string,
-  maxWidth: number,
-  fontSize: number,
-): WrapResult {
+function layoutTitleLinesInternal(rawText: string, maxWidth: number, fontSize: number): WrapResult {
   const normalized = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const explicitLines = normalized.split('\n')
 
@@ -284,11 +280,7 @@ function layoutTitleLinesInternal(
   }
 }
 
-export function layoutTitleLines(
-  rawText: string,
-  maxWidth: number,
-  fontSize: number,
-): string[] {
+export function layoutTitleLines(rawText: string, maxWidth: number, fontSize: number): string[] {
   const { lines } = layoutTitleLinesInternal(rawText, maxWidth, fontSize)
   if (lines.length === 0) {
     return ['']

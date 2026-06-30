@@ -18,7 +18,11 @@ export interface GradientHueSelectorProps {
 const HUE_GRADIENT =
   'linear-gradient(to right, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(359 100% 50%))'
 
-export const GradientHueSelector = ({ baseColor, disabled = false, onChange }: GradientHueSelectorProps) => {
+export const GradientHueSelector = ({
+  baseColor,
+  disabled = false,
+  onChange,
+}: GradientHueSelectorProps) => {
   const [hue, setHue] = useState(() => hueFromHex(baseColor) ?? getDefaultGradientHue())
   const [hexInput, setHexInput] = useState(baseColor)
 

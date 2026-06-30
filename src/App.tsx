@@ -4,7 +4,10 @@ import { ContentContainer } from './components/ContentContainer'
 import { ExportAssetsModal } from './components/ExportAssetsModal/ExportAssetsModal'
 import { HeaderToolbar } from './components/HeaderToolbar'
 import { PlatformToggle } from './components/PlatformToggle'
-import { ScreenshotFileInput, type ScreenshotFileInputHandle } from './components/ScreenshotFileInput'
+import {
+  ScreenshotFileInput,
+  type ScreenshotFileInputHandle,
+} from './components/ScreenshotFileInput'
 import { useBeforeUnload } from './hooks/useBeforeUnload'
 import { useScreenshots } from './hooks/useScreenshots'
 import { ScreenshotWorkspace } from './components/ScreenshotWorkspace'
