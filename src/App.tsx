@@ -2,6 +2,7 @@ import { Box, Flex, Heading, HStack, Stack, Text } from '@chakra-ui/react'
 import { useMemo, useRef, useState } from 'react'
 import { ContentContainer } from './components/ContentContainer'
 import { ExportAssetsModal } from './components/ExportAssetsModal/ExportAssetsModal'
+import { Footer } from './components/Footer'
 import { HeaderToolbar } from './components/HeaderToolbar'
 import { PlatformToggle } from './components/PlatformToggle'
 import {
@@ -12,6 +13,7 @@ import { useBeforeUnload } from './hooks/useBeforeUnload'
 import { useScreenshots } from './hooks/useScreenshots'
 import { ScreenshotWorkspace } from './components/ScreenshotWorkspace'
 import type { Platform } from './types'
+import { footerHeight } from './layout'
 import { exportAssets } from './utils/exportFrames'
 import { featureGraphicGradient } from './utils/featureGraphicConfig'
 
@@ -84,7 +86,7 @@ export const App = () => {
 
       <Box as="header" flexShrink={0} position="relative" zIndex={1}>
         <ContentContainer>
-          <Box pt={6} pb={4}>
+          <Box pt={10} pb={4}>
             <Flex align="center" gap={4}>
               <HStack flex="1" gap={3} align="center" minW={0}>
                 <Stack gap={0} align="center">
@@ -144,6 +146,7 @@ export const App = () => {
         flexDirection="column"
         flex="1"
         minH={0}
+        pb={footerHeight}
         position="relative"
         zIndex={1}
       >
@@ -160,6 +163,8 @@ export const App = () => {
           onToggleTitlePosition={toggleTitlePosition}
         />
       </Box>
+
+      <Footer />
 
       <ExportAssetsModal
         open={exportModalOpen}
