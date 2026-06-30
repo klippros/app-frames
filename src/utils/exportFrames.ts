@@ -22,6 +22,7 @@ function triggerDownload(blob: Blob, filename: string) {
 
 async function renderFramedScreenshot(
   format: ExportFormat,
+  screenshot: Screenshot,
   image: HTMLImageElement,
   index: number,
   gradientConfig: GradientConfig,
@@ -32,7 +33,19 @@ async function renderFramedScreenshot(
     throw new Error('Failed to get canvas context')
   }
 
-  drawFramedScreenshot(format.renderer, ctx, image, format.width, format.height, gradientConfig)
+  await drawFramedScreenshot(
+    format.renderer,
+    ctx,
+    image,
+    format.width,
+    format.height,
+    gradientConfig,
+    {
+      title: screenshot.title,
+      titlePosition: screenshot.titlePosition,
+      drawTitle: true,
+    },
+  )
   const blob = await canvasToJpegBlob(canvas)
   return {
     path: `${format.store}/${format.folderName}/screenshot-${padIndex(index)}.jpg`,
@@ -80,8 +93,8 @@ export async function exportAssets(
       continue
     }
 
-    for (const [index, image] of images.entries()) {
-      entries.push(await renderFramedScreenshot(format, image, index, gradientConfig))
+    for (const [index, screenshot] of screenshots.entries()) {
+      entries.push(await renderFramedScreenshot(format, screenshot, images[index], index, gradientConfig))
     }
   }
 

@@ -1,16 +1,18 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import type { Screenshot } from '../types'
+import { createScreenshot } from '../utils/frameTitle'
 
 export interface ScreenshotFileInputHandle {
   open: () => void
 }
 
 export interface ScreenshotFileInputProps {
+  existingScreenshotCount?: number
   onSelect: (screenshots: Screenshot[]) => void
 }
 
 export const ScreenshotFileInput = forwardRef<ScreenshotFileInputHandle, ScreenshotFileInputProps>(
-  ({ onSelect }, ref) => {
+  ({ existingScreenshotCount = 0, onSelect }, ref) => {
     const inputRef = useRef<HTMLInputElement>(null)
 
     useImperativeHandle(ref, () => ({
@@ -28,11 +30,9 @@ export const ScreenshotFileInput = forwardRef<ScreenshotFileInputHandle, Screens
         return
       }
 
-      const screenshots: Screenshot[] = files.map((file) => ({
-        id: crypto.randomUUID(),
-        file,
-        url: URL.createObjectURL(file),
-      }))
+      const screenshots: Screenshot[] = files.map((file, index) =>
+        createScreenshot(file, existingScreenshotCount + index),
+      )
 
       onSelect(screenshots)
       event.target.value = ''

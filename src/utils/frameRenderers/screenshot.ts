@@ -1,27 +1,54 @@
+import type { RendererId, TitlePosition } from '../../types'
 import type { GradientConfig } from '../featureGraphicConfig'
 import { featureGraphicGradient } from '../featureGraphicConfig'
+import { getFrameLayout } from '../frameTitle'
 import { drawRadialBackground, drawRoundedImageContain } from '../featureGraphicCanvas'
+import { drawFrameTitle } from './drawFrameTitle'
 
-const PADDING_RATIO = 0.06
-const BORDER_RADIUS_RATIO = 0.028
+export interface StoreScreenshotOptions {
+  title?: string
+  titlePosition?: TitlePosition
+  drawTitle?: boolean
+  renderer?: RendererId
+}
 
-export function drawStoreScreenshot(
+export async function drawStoreScreenshot(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement,
   width: number,
   height: number,
   gradientConfig: GradientConfig = featureGraphicGradient,
+  options: StoreScreenshotOptions = {},
 ) {
+  const {
+    title = '',
+    titlePosition = 'top',
+    drawTitle = true,
+    renderer,
+  } = options
+
   drawRadialBackground(ctx, { width, height }, gradientConfig)
 
-  const padding = Math.min(width, height) * PADDING_RATIO
-  const borderRadius = width * BORDER_RADIUS_RATIO
+  const layout = getFrameLayout(width, height, titlePosition, renderer)
+  const { screenshotRect } = layout
 
   drawRoundedImageContain(ctx, image, image.naturalWidth, image.naturalHeight, {
-    x: padding,
-    y: padding,
-    width: width - padding * 2,
-    height: height - padding * 2,
-    borderRadius,
+    x: screenshotRect.x,
+    y: screenshotRect.y,
+    width: screenshotRect.width,
+    height: screenshotRect.height,
+    borderRadius: screenshotRect.borderRadius,
   })
+
+  if (drawTitle && title) {
+    await drawFrameTitle(
+      ctx,
+      title,
+      layout.textContentArea,
+      layout.fontSize,
+      layout.lineHeight,
+      layout.maxTextWidth,
+      width,
+    )
+  }
 }

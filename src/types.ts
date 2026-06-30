@@ -7,10 +7,14 @@ export type ExportFormatKind = 'framed-phone' | 'framed-tablet' | 'feature-graph
 export type RendererId =
   'ios-phone' | 'android-phone' | 'ios-tablet' | 'android-tablet' | 'feature-graphic'
 
+export type TitlePosition = 'top' | 'bottom'
+
 export interface Screenshot {
   id: string
   file: File
   url: string
+  title: string
+  titlePosition: TitlePosition
 }
 
 export interface ExportFormat {

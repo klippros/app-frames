@@ -14,6 +14,8 @@ export interface FramesEditorProps {
   onReplace: (id: string, file: File) => void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
+  onTitleChange: (id: string, title: string) => void
+  onToggleTitlePosition: (id: string) => void
 }
 
 export const FramesEditor = ({
@@ -23,6 +25,8 @@ export const FramesEditor = ({
   onReplace,
   onDelete,
   onSwap,
+  onTitleChange,
+  onToggleTitlePosition,
 }: FramesEditorProps) => {
   const format = PREVIEW_FORMAT_BY_PLATFORM[platform]
   const scrollRef = useHorizontalScrollGuard<HTMLDivElement>()
@@ -45,11 +49,19 @@ export const FramesEditor = ({
               screenshotUrl={screenshot.url}
               format={format}
               gradientConfig={gradientConfig}
+              title={screenshot.title}
+              titlePosition={screenshot.titlePosition}
               onReplace={(file) => {
                 onReplace(screenshot.id, file)
               }}
               onDelete={() => {
                 onDelete(screenshot.id)
+              }}
+              onTitleChange={(title) => {
+                onTitleChange(screenshot.id, title)
+              }}
+              onToggleTitlePosition={() => {
+                onToggleTitlePosition(screenshot.id)
               }}
             />
             {index < screenshots.length - 1 ? (

@@ -88,6 +88,25 @@ export const App = () => {
     })
   }
 
+  const handleTitleChange = (id: string, title: string) => {
+    setScreenshots((prev) =>
+      prev.map((screenshot) => (screenshot.id === id ? { ...screenshot, title } : screenshot)),
+    )
+  }
+
+  const handleToggleTitlePosition = (id: string) => {
+    setScreenshots((prev) =>
+      prev.map((screenshot) =>
+        screenshot.id === id
+          ? {
+              ...screenshot,
+              titlePosition: screenshot.titlePosition === 'top' ? 'bottom' : 'top',
+            }
+          : screenshot,
+      ),
+    )
+  }
+
   const hasScreenshots = screenshots.length > 0
 
   useBeforeUnload(hasScreenshots)
@@ -116,7 +135,11 @@ export const App = () => {
               </HStack>
               {hasScreenshots ? (
                 <>
-                  <ScreenshotFileInput ref={addScreenshotsInputRef} onSelect={handleAddScreenshots} />
+                  <ScreenshotFileInput
+                    ref={addScreenshotsInputRef}
+                    existingScreenshotCount={screenshots.length}
+                    onSelect={handleAddScreenshots}
+                  />
                   <HeaderToolbar
                     gradientBaseColor={gradientBaseColor}
                     onGradientBaseColorChange={setGradientBaseColor}
@@ -142,6 +165,8 @@ export const App = () => {
         onReplace={handleReplaceScreenshot}
         onDelete={handleDeleteScreenshot}
         onSwap={handleSwapScreenshots}
+        onTitleChange={handleTitleChange}
+        onToggleTitlePosition={handleToggleTitlePosition}
       />
 
       <ExportAssetsModal
