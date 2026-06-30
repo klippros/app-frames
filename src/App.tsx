@@ -3,6 +3,7 @@ import { faDownload } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useEffect, useState } from 'react'
 import { ExportAssetsModal } from './components/ExportAssetsModal/ExportAssetsModal'
+import { useBeforeUnload } from './hooks/useBeforeUnload'
 import { FramesEditor } from './components/FramesEditor'
 import { PlatformToggle } from './components/PlatformToggle'
 import { ScreenshotPicker } from './components/ScreenshotPicker'
@@ -35,6 +36,8 @@ export const App = () => {
   }
 
   const hasScreenshots = screenshots.length > 0
+
+  useBeforeUnload(hasScreenshots)
 
   return (
     <Box minH="100vh" bg="bg">
