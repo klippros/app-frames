@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react'
 import type { ExportFormat } from '../types'
+import type { GradientConfig } from '../utils/featureGraphicConfig'
 import { drawFramedScreenshot } from '../utils/frameRenderers'
 import { loadImage } from '../utils/loadImage'
 
 export interface FrameCanvasProps {
   screenshotUrl: string
   format: ExportFormat
+  gradientConfig: GradientConfig
 }
 
-export const FrameCanvas = ({ screenshotUrl, format }: FrameCanvasProps) => {
+export const FrameCanvas = ({ screenshotUrl, format, gradientConfig }: FrameCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -32,13 +34,13 @@ export const FrameCanvas = ({ screenshotUrl, format }: FrameCanvasProps) => {
         return
       }
 
-      drawFramedScreenshot(format.renderer, ctx, image, format.width, format.height)
+      drawFramedScreenshot(format.renderer, ctx, image, format.width, format.height, gradientConfig)
     })()
 
     return () => {
       cancelled = true
     }
-  }, [screenshotUrl, format])
+  }, [screenshotUrl, format, gradientConfig])
 
   return (
     <canvas

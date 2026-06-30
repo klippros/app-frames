@@ -7,3 +7,37 @@
 body {
   margin: 0;
 }
+
+.gradient-hue-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--track-gradient);
+}
+
+.gradient-hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 2px solid white;
+  background: var(--thumb-color);
+  margin-top: -5px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.gradient-hue-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--track-gradient);
+  border: none;
+}
+
+.gradient-hue-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 2px solid white;
+  background: var(--thumb-color);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}

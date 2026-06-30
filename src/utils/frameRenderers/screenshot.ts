@@ -1,3 +1,4 @@
+import type { GradientConfig } from '../featureGraphicConfig'
 import { featureGraphicGradient } from '../featureGraphicConfig'
 import { drawRadialBackground, drawRoundedImageContain } from '../featureGraphicCanvas'
 
@@ -9,8 +10,9 @@ export function drawStoreScreenshot(
   image: HTMLImageElement,
   width: number,
   height: number,
+  gradientConfig: GradientConfig = featureGraphicGradient,
 ) {
-  drawRadialBackground(ctx, { width, height }, featureGraphicGradient)
+  drawRadialBackground(ctx, { width, height }, gradientConfig)
 
   const padding = Math.min(width, height) * PADDING_RATIO
   const borderRadius = width * BORDER_RADIUS_RATIO

@@ -1,5 +1,7 @@
 import JSZip from 'jszip'
 import type { ExportFormat, Screenshot } from '../types'
+import type { GradientConfig } from './featureGraphicConfig'
+import { featureGraphicGradient } from './featureGraphicConfig'
 import { EXPORT_FORMATS } from './exportFormats'
 import { canvasToJpegBlob, createCanvas } from './frameRenderers/drawUtils'
 import { drawFramedScreenshot, renderFeatureGraphicCanvas } from './frameRenderers'
@@ -22,6 +24,7 @@ async function renderFramedScreenshot(
   format: ExportFormat,
   image: HTMLImageElement,
   index: number,
+  gradientConfig: GradientConfig,
 ) {
   const canvas = createCanvas(format.width, format.height)
   const ctx = canvas.getContext('2d')
@@ -29,7 +32,7 @@ async function renderFramedScreenshot(
     throw new Error('Failed to get canvas context')
   }
 
-  drawFramedScreenshot(format.renderer, ctx, image, format.width, format.height)
+  drawFramedScreenshot(format.renderer, ctx, image, format.width, format.height, gradientConfig)
   const blob = await canvasToJpegBlob(canvas)
   return {
     path: `${format.store}/${format.folderName}/screenshot-${padIndex(index)}.jpg`,
@@ -37,11 +40,19 @@ async function renderFramedScreenshot(
   }
 }
 
-async function renderFeatureGraphicExport(format: ExportFormat, images: HTMLImageElement[]) {
-  const canvas = renderFeatureGraphicCanvas(images, {
-    width: format.width,
-    height: format.height,
-  })
+async function renderFeatureGraphicExport(
+  format: ExportFormat,
+  images: HTMLImageElement[],
+  gradientConfig: GradientConfig,
+) {
+  const canvas = renderFeatureGraphicCanvas(
+    images,
+    {
+      width: format.width,
+      height: format.height,
+    },
+    gradientConfig,
+  )
   const blob = await canvasToJpegBlob(canvas)
   return {
     path: `${format.store}/${format.folderName}.jpg`,
@@ -49,7 +60,11 @@ async function renderFeatureGraphicExport(format: ExportFormat, images: HTMLImag
   }
 }
 
-export async function exportAssets(screenshots: Screenshot[], selectedFormatIds: string[]) {
+export async function exportAssets(
+  screenshots: Screenshot[],
+  selectedFormatIds: string[],
+  gradientConfig: GradientConfig = featureGraphicGradient,
+) {
   const formats = EXPORT_FORMATS.filter((format) => selectedFormatIds.includes(format.id))
   if (formats.length === 0) {
     return
@@ -61,12 +76,12 @@ export async function exportAssets(screenshots: Screenshot[], selectedFormatIds:
 
   for (const format of formats) {
     if (format.kind === 'feature-graphic') {
-      entries.push(await renderFeatureGraphicExport(format, images))
+      entries.push(await renderFeatureGraphicExport(format, images, gradientConfig))
       continue
     }
 
     for (const [index, image] of images.entries()) {
-      entries.push(await renderFramedScreenshot(format, image, index))
+      entries.push(await renderFramedScreenshot(format, image, index, gradientConfig))
     }
   }
 

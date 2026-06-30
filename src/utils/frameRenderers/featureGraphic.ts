@@ -1,4 +1,4 @@
-import type { FeatureGraphicConfig } from '../featureGraphicConfig'
+import type { FeatureGraphicConfig, GradientConfig } from '../featureGraphicConfig'
 import { featureGraphicConfig, featureGraphicGradient } from '../featureGraphicConfig'
 import {
   createFeatureGraphicCanvas,
@@ -82,6 +82,7 @@ function toLoadedScreenshots(images: HTMLImageElement[]): LoadedScreenshot[] {
 export function renderFeatureGraphicCanvas(
   images: HTMLImageElement[],
   outputDimensions = featureGraphicConfig.dimensions,
+  gradientConfig: GradientConfig = featureGraphicGradient,
 ): HTMLCanvasElement {
   const config = {
     ...featureGraphicConfig,
@@ -118,7 +119,7 @@ export function renderFeatureGraphicCanvas(
 
   hiContext.imageSmoothingEnabled = true
   hiContext.imageSmoothingQuality = 'high'
-  drawRadialBackground(hiContext, hiConfig.dimensions, featureGraphicGradient)
+  drawRadialBackground(hiContext, hiConfig.dimensions, gradientConfig)
 
   const loaded = toLoadedScreenshots(images)
   if (!loaded.length) {
@@ -175,7 +176,8 @@ export function drawFeatureGraphic(
   images: HTMLImageElement[],
   width: number,
   height: number,
+  gradientConfig: GradientConfig = featureGraphicGradient,
 ) {
-  const canvas = renderFeatureGraphicCanvas(images, { width, height })
+  const canvas = renderFeatureGraphicCanvas(images, { width, height }, gradientConfig)
   ctx.drawImage(canvas, 0, 0, width, height)
 }
