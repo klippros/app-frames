@@ -1,7 +1,7 @@
-import { IconButton } from '@chakra-ui/react'
 import { faAndroid, faApple } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { Platform } from '../types'
+import { ToolbarIconButton } from './ToolbarIconButton'
 
 export interface PlatformToggleProps {
   platform: Platform
@@ -10,7 +10,7 @@ export interface PlatformToggleProps {
 
 export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
   <>
-    <IconButton
+    <ToolbarIconButton
       aria-label="Show iOS previews"
       aria-pressed={platform === 'ios'}
       variant={platform === 'ios' ? 'solid' : 'outline'}
@@ -19,8 +19,8 @@ export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
       }}
     >
       <FontAwesomeIcon icon={faApple} />
-    </IconButton>
-    <IconButton
+    </ToolbarIconButton>
+    <ToolbarIconButton
       aria-label="Show Android previews"
       aria-pressed={platform === 'android'}
       variant={platform === 'android' ? 'solid' : 'outline'}
@@ -29,6 +29,6 @@ export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
       }}
     >
       <FontAwesomeIcon icon={faAndroid} />
-    </IconButton>
+    </ToolbarIconButton>
   </>
 )

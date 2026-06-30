@@ -6,6 +6,36 @@
 
 body {
   margin: 0;
+  overflow: hidden;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overscroll-behavior-x: none;
+}
+
+:root {
+  --main-content-max-width: 1200px;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.preview-scroll-strip {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  overscroll-behavior-x: none;
+  padding-inline: calc((100vw - min(100vw, var(--main-content-max-width))) / 2 + 1.5rem);
+  scroll-padding-inline: calc((100vw - min(100vw, var(--main-content-max-width))) / 2 + 1.5rem);
+  touch-action: pan-y pinch-zoom;
 }
 
 .gradient-hue-slider::-webkit-slider-runnable-track {

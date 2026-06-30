@@ -1,4 +1,4 @@
-import { Button } from '@chakra-ui/react'
+import { Button, Flex } from '@chakra-ui/react'
 import { useRef } from 'react'
 import type { Screenshot } from '../types'
 
@@ -33,11 +33,11 @@ export const ScreenshotPicker = ({ onSelect }: ScreenshotPickerProps) => {
   }
 
   return (
-    <>
+    <Flex justify="center">
       <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={handleChange} />
       <Button size="lg" onClick={handleClick}>
         Select Screenshots
       </Button>
-    </>
+    </Flex>
   )
 }

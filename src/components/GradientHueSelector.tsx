@@ -1,7 +1,13 @@
 import { Box, Flex, Input } from '@chakra-ui/react'
 import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
-import { baseColorFromHexInput, colorWithHue, getDefaultGradientHue, hueFromHex } from '../utils/colorHue'
+import { toolbarControlHeight } from './ToolbarIconButton'
+import {
+  baseColorFromHexInput,
+  colorWithHue,
+  getDefaultGradientHue,
+  hueFromHex,
+} from '../utils/colorHue'
 
 export interface GradientHueSelectorProps {
   baseColor: string
@@ -40,13 +46,13 @@ export const GradientHueSelector = ({ baseColor, onChange }: GradientHueSelector
   return (
     <Flex
       align="center"
-      gap={3}
-      borderWidth="1px"
       borderColor="border"
       borderRadius="full"
-      px={3}
-      py={2}
+      borderWidth="1px"
+      gap={3}
+      h={toolbarControlHeight}
       maxW="320px"
+      px={3}
     >
       <Box position="relative" flex="1" minW="140px" display="flex" alignItems="center">
         <input

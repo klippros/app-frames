@@ -1,9 +1,10 @@
-import { HStack, IconButton } from '@chakra-ui/react'
+import { HStack } from '@chakra-ui/react'
 import { faDownload } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { Platform } from '../types'
 import { GradientHueSelector } from './GradientHueSelector'
 import { PlatformToggle } from './PlatformToggle'
+import { ToolbarIconButton } from './ToolbarIconButton'
 
 export interface HeaderToolbarProps {
   platform: Platform
@@ -23,8 +24,8 @@ export const HeaderToolbar = ({
   <HStack gap={2}>
     <GradientHueSelector baseColor={gradientBaseColor} onChange={onGradientBaseColorChange} />
     <PlatformToggle platform={platform} onChange={onPlatformChange} />
-    <IconButton aria-label="Export assets" variant="outline" onClick={onExportClick}>
+    <ToolbarIconButton aria-label="Export assets" onClick={onExportClick}>
       <FontAwesomeIcon icon={faDownload} />
-    </IconButton>
+    </ToolbarIconButton>
   </HStack>
 )
