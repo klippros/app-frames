@@ -1,7 +1,7 @@
-import { Box, Flex, Input } from '@chakra-ui/react'
+import { Flex, Input } from '@chakra-ui/react'
 import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
-import { toolbarControlHeight } from './ToolbarIconButton'
+import { toolbarControlSize } from '../layout'
 import {
   baseColorFromHexInput,
   colorWithHue,
@@ -52,18 +52,19 @@ export const GradientHueSelector = ({
     <Flex
       align="center"
       aria-disabled={disabled}
-      borderColor="border"
+      bg="transparent"
+      borderColor="blue.300"
       borderRadius="full"
       borderWidth="1px"
       cursor={disabled ? 'not-allowed' : undefined}
       gap={3}
-      h={toolbarControlHeight}
+      h={toolbarControlSize}
       maxW="320px"
       opacity={disabled ? 0.45 : undefined}
       pointerEvents={disabled ? 'none' : undefined}
       px={3}
     >
-      <Box position="relative" flex="1" minW="140px" display="flex" alignItems="center">
+      <Flex position="relative" flex="1" minW="100px" align="center">
         <input
           type="range"
           min={0}
@@ -91,7 +92,7 @@ export const GradientHueSelector = ({
           }
           className="gradient-hue-slider"
         />
-      </Box>
+      </Flex>
       <Input
         value={hexInput}
         disabled={disabled}
@@ -110,11 +111,19 @@ export const GradientHueSelector = ({
         aria-label="Gradient base color"
         size="sm"
         w="88px"
+        h="28px"
         borderRadius="full"
-        borderColor="border.emphasized"
+        borderColor="white"
+        bg="transparent"
+        color="white"
         fontFamily="mono"
+        fontSize="xs"
         textTransform="uppercase"
+        textAlign="center"
         px={3}
+        _hover={{ borderColor: 'white' }}
+        _focus={{ borderColor: 'white', boxShadow: 'none', outline: 'none' }}
+        _focusVisible={{ borderColor: 'white', boxShadow: 'none', outline: 'none' }}
       />
     </Flex>
   )

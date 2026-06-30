@@ -6,10 +6,11 @@ import type { ExportFormat, TitlePosition } from '../../types'
 import type { GradientConfig } from '../../utils/featureGraphicConfig'
 import { DeleteFrameDialog } from '../DeleteFrameDialog/DeleteFrameDialog'
 import { FrameCanvas } from '../FrameCanvas'
-import { ToolbarIconButton, toolbarControlHeight } from '../ToolbarIconButton'
+import { ToolbarIconButton } from '../ToolbarIconButton'
+import { toolbarControlSize } from '../../layout'
 import { FrameTitleOverlay } from './FrameTitleOverlay'
 
-const frameActionsRightOffset = `calc(${toolbarControlHeight} / 2 + var(--chakra-spacing-2))`
+const frameActionsRightOffset = `calc(${toolbarControlSize} / 2 + var(--chakra-spacing-2))`
 
 export interface ScreenshotFrameProps {
   screenshotUrl: string
@@ -144,11 +145,7 @@ export const ScreenshotFrame = ({
         transform="translateY(-50%)"
         zIndex={2}
       >
-        <ToolbarIconButton
-          aria-label="Toggle title position"
-          aria-pressed={titlePosition === 'bottom'}
-          onClick={onToggleTitlePosition}
-        >
+        <ToolbarIconButton aria-label="Toggle title position" onClick={onToggleTitlePosition}>
           <FontAwesomeIcon icon={faTextHeight} />
         </ToolbarIconButton>
         <ToolbarIconButton aria-label="Replace screenshot" onClick={handleReplaceClick}>
@@ -156,7 +153,11 @@ export const ScreenshotFrame = ({
         </ToolbarIconButton>
       </HStack>
       <Box position="absolute" right={0} top={0} transform="translate(50%, -50%)" zIndex={2}>
-        <ToolbarIconButton aria-label="Delete screenshot" onClick={handleOpenDeleteDialog}>
+        <ToolbarIconButton
+          aria-label="Delete screenshot"
+          tone="destructive"
+          onClick={handleOpenDeleteDialog}
+        >
           <FontAwesomeIcon icon={faTrash} />
         </ToolbarIconButton>
       </Box>

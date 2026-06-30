@@ -2,6 +2,7 @@ import { Button, Dialog, Stack, VStack } from '@chakra-ui/react'
 import { faAndroid, faApple } from '@fortawesome/free-brands-svg-icons'
 import { useState } from 'react'
 import { DEFAULT_SELECTED_FORMAT_IDS, getFormatsByStore } from '../../utils/exportFormats'
+import { darkDialogContentProps } from '../darkDialogContentProps'
 import { FormatRow } from './FormatRow'
 import { StoreSectionHeading } from './StoreSectionHeading'
 
@@ -44,9 +45,15 @@ export const ExportAssetsModal = ({ open, onOpenChange, onExport }: ExportAssets
     >
       <Dialog.Backdrop />
       <Dialog.Positioner>
-        <Dialog.Content>
+        <Dialog.Content
+          bg={darkDialogContentProps.bg}
+          borderWidth={darkDialogContentProps.borderWidth}
+          borderColor={darkDialogContentProps.borderColor}
+          color={darkDialogContentProps.color}
+          shadow={darkDialogContentProps.shadow}
+        >
           <Dialog.Header>
-            <Dialog.Title>Export assets</Dialog.Title>
+            <Dialog.Title color="white">Export assets</Dialog.Title>
           </Dialog.Header>
           <Dialog.Body>
             <VStack align="stretch" gap={6}>
@@ -80,9 +87,10 @@ export const ExportAssetsModal = ({ open, onOpenChange, onExport }: ExportAssets
           </Dialog.Body>
           <Dialog.Footer>
             <Dialog.ActionTrigger asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="cancel">Cancel</Button>
             </Dialog.ActionTrigger>
             <Button
+              variant="emphasis"
               onClick={() => {
                 void handleExport()
               }}

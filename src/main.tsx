@@ -1,4 +1,5 @@
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react'
+import { ChakraProvider, Theme } from '@chakra-ui/react'
+import { system } from './theme'
 import { config } from '@fortawesome/fontawesome-svg-core'
 import '@fortawesome/fontawesome-svg-core/styles.css'
 import { StrictMode } from 'react'
@@ -10,8 +11,10 @@ config.autoAddCss = false
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ChakraProvider value={defaultSystem}>
-      <App />
+    <ChakraProvider value={system}>
+      <Theme appearance="dark">
+        <App />
+      </Theme>
     </ChakraProvider>
   </StrictMode>,
 )

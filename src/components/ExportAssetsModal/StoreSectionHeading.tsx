@@ -8,7 +8,7 @@ export interface StoreSectionHeadingProps {
 }
 
 export const StoreSectionHeading = ({ icon, label }: StoreSectionHeadingProps) => (
-  <HStack gap={2} color="fg.muted">
+  <HStack gap={2} color="whiteAlpha.700">
     <FontAwesomeIcon icon={icon} />
     <Text fontSize="xs" fontWeight="semibold" letterSpacing="wider">
       {label}

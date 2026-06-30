@@ -27,7 +27,9 @@ export const FormatRow = ({ format, checked, onCheckedChange }: FormatRowProps) 
     <Checkbox.Control mt={0.5} />
     <Stack gap={0.5} flex="1">
       <HStack gap={2} align="center">
-        <Checkbox.Label fontWeight="medium">{format.label}</Checkbox.Label>
+        <Checkbox.Label fontWeight="semibold" color="white">
+          {format.label}
+        </Checkbox.Label>
         {format.recommended === true ? (
           <Badge colorPalette="blue" size="sm">
             Recommended
@@ -35,11 +37,11 @@ export const FormatRow = ({ format, checked, onCheckedChange }: FormatRowProps) 
         ) : null}
       </HStack>
       {format.description !== undefined && format.description !== '' ? (
-        <Text fontSize="sm" color="fg.muted">
+        <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.45">
           {format.description}
         </Text>
       ) : null}
-      <Text fontSize="sm" color="fg.muted">
+      <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.45">
         {format.width}×{format.height}
       </Text>
     </Stack>

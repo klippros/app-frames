@@ -48,8 +48,41 @@ export const App = () => {
   useBeforeUnload(hasScreenshots)
 
   return (
-    <Box bg="bg" display="flex" flexDirection="column" h="100dvh" overflow="hidden">
-      <Box as="header" borderBottomWidth="1px" borderColor="border" flexShrink={0}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      h="100dvh"
+      overflow="hidden"
+      position="relative"
+    >
+      <Box
+        position="fixed"
+        top="-12%"
+        left="-8%"
+        width="420px"
+        height="420px"
+        borderRadius="full"
+        bg="rgba(99,102,241,0.22)"
+        filter="blur(120px)"
+        pointerEvents="none"
+        zIndex={0}
+        aria-hidden
+      />
+      <Box
+        position="fixed"
+        right="-8%"
+        bottom="-15%"
+        width="460px"
+        height="460px"
+        borderRadius="full"
+        bg="rgba(56,189,248,0.16)"
+        filter="blur(130px)"
+        pointerEvents="none"
+        zIndex={0}
+        aria-hidden
+      />
+
+      <Box as="header" flexShrink={0} position="relative" zIndex={1}>
         <ContentContainer>
           <Box py={4}>
             <Flex align="center" gap={4}>
@@ -63,7 +96,13 @@ export const App = () => {
                   >
                     App Framer
                   </Heading>
-                  <Text fontSize="sm" fontWeight="semibold" lineHeight="1.4" textAlign="center">
+                  <Text
+                    fontSize="sm"
+                    fontWeight="semibold"
+                    lineHeight="1.4"
+                    textAlign="center"
+                    color="whiteAlpha.700"
+                  >
                     Klippros Studios
                   </Text>
                 </Stack>
@@ -100,18 +139,27 @@ export const App = () => {
         </ContentContainer>
       </Box>
 
-      <ScreenshotWorkspace
-        screenshots={screenshots}
-        platform={platform}
-        gradientConfig={gradientConfig}
-        showBezel={showBezel}
-        onSelect={selectScreenshots}
-        onReplace={replaceScreenshot}
-        onDelete={deleteScreenshot}
-        onSwap={swapScreenshots}
-        onTitleChange={setTitle}
-        onToggleTitlePosition={toggleTitlePosition}
-      />
+      <Box
+        display="flex"
+        flexDirection="column"
+        flex="1"
+        minH={0}
+        position="relative"
+        zIndex={1}
+      >
+        <ScreenshotWorkspace
+          screenshots={screenshots}
+          platform={platform}
+          gradientConfig={gradientConfig}
+          showBezel={showBezel}
+          onSelect={selectScreenshots}
+          onReplace={replaceScreenshot}
+          onDelete={deleteScreenshot}
+          onSwap={swapScreenshots}
+          onTitleChange={setTitle}
+          onToggleTitlePosition={toggleTitlePosition}
+        />
+      </Box>
 
       <ExportAssetsModal
         open={exportModalOpen}

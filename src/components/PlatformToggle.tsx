@@ -15,7 +15,6 @@ export const PlatformToggle = ({ disabled = false, platform, onChange }: Platfor
       aria-label="Show iOS previews"
       aria-pressed={platform === 'ios'}
       disabled={disabled}
-      variant={platform === 'ios' ? 'solid' : 'outline'}
       onClick={() => {
         onChange('ios')
       }}
@@ -26,7 +25,6 @@ export const PlatformToggle = ({ disabled = false, platform, onChange }: Platfor
       aria-label="Show Android previews"
       aria-pressed={platform === 'android'}
       disabled={disabled}
-      variant={platform === 'android' ? 'solid' : 'outline'}
       onClick={() => {
         onChange('android')
       }}

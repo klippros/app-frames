@@ -33,7 +33,6 @@ export const HeaderToolbar = ({
       aria-label="Toggle device bezel"
       aria-pressed={showBezel}
       disabled={disabled}
-      variant={showBezel ? 'solid' : 'outline'}
       onClick={() => {
         onShowBezelChange(!showBezel)
       }}

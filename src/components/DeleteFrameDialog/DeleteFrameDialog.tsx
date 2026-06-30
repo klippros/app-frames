@@ -1,4 +1,5 @@
 import { Button, Dialog, Text } from '@chakra-ui/react'
+import { darkDialogContentProps } from '../darkDialogContentProps'
 
 export interface DeleteFrameDialogProps {
   open: boolean
@@ -22,22 +23,28 @@ export const DeleteFrameDialog = ({
   >
     <Dialog.Backdrop />
     <Dialog.Positioner>
-      <Dialog.Content>
+      <Dialog.Content
+        bg={darkDialogContentProps.bg}
+        borderWidth={darkDialogContentProps.borderWidth}
+        borderColor={darkDialogContentProps.borderColor}
+        color={darkDialogContentProps.color}
+        shadow={darkDialogContentProps.shadow}
+      >
         <Dialog.Header>
-          <Dialog.Title>Delete frame</Dialog.Title>
+          <Dialog.Title color="white">Delete frame</Dialog.Title>
         </Dialog.Header>
         <Dialog.Body>
-          <Text>
+          <Text fontSize="sm" color="whiteAlpha.900" lineHeight="1.55">
             Remove &ldquo;{fileName}&rdquo; from your screenshots and discard its frame? This cannot
             be undone.
           </Text>
         </Dialog.Body>
         <Dialog.Footer>
           <Dialog.ActionTrigger asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="cancel">Cancel</Button>
           </Dialog.ActionTrigger>
           <Button
-            colorPalette="red"
+            variant="destructive"
             onClick={() => {
               onConfirm()
               onOpenChange(false)
