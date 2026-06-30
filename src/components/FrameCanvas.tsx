@@ -8,6 +8,7 @@ export interface FrameCanvasProps {
   screenshotUrl: string
   format: ExportFormat
   gradientConfig: GradientConfig
+  showBezel: boolean
   title: string
   titlePosition: TitlePosition
 }
@@ -16,6 +17,7 @@ export const FrameCanvas = ({
   screenshotUrl,
   format,
   gradientConfig,
+  showBezel,
   title,
   titlePosition,
 }: FrameCanvasProps) => {
@@ -53,6 +55,7 @@ export const FrameCanvas = ({
           title,
           titlePosition,
           drawTitle: false,
+          showBezel,
         },
       )
     })()
@@ -60,7 +63,7 @@ export const FrameCanvas = ({
     return () => {
       cancelled = true
     }
-  }, [screenshotUrl, format, gradientConfig, title, titlePosition])
+  }, [screenshotUrl, format, gradientConfig, title, titlePosition, showBezel])
 
   return (
     <canvas

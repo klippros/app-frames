@@ -26,6 +26,7 @@ async function renderFramedScreenshot(
   image: HTMLImageElement,
   index: number,
   gradientConfig: GradientConfig,
+  showBezel: boolean,
 ) {
   const canvas = createCanvas(format.width, format.height)
   const ctx = canvas.getContext('2d')
@@ -44,6 +45,7 @@ async function renderFramedScreenshot(
       title: screenshot.title,
       titlePosition: screenshot.titlePosition,
       drawTitle: true,
+      showBezel,
     },
   )
   const blob = await canvasToJpegBlob(canvas)
@@ -77,6 +79,7 @@ export async function exportAssets(
   screenshots: Screenshot[],
   selectedFormatIds: string[],
   gradientConfig: GradientConfig = featureGraphicGradient,
+  showBezel = true,
 ) {
   const formats = EXPORT_FORMATS.filter((format) => selectedFormatIds.includes(format.id))
   if (formats.length === 0) {
@@ -95,7 +98,7 @@ export async function exportAssets(
 
     for (const [index, screenshot] of screenshots.entries()) {
       entries.push(
-        await renderFramedScreenshot(format, screenshot, images[index], index, gradientConfig),
+        await renderFramedScreenshot(format, screenshot, images[index], index, gradientConfig, showBezel),
       )
     }
   }

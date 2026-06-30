@@ -30,6 +30,7 @@ export const App = () => {
   const [platform, setPlatform] = useState<Platform>('ios')
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [gradientBaseColor, setGradientBaseColor] = useState(featureGraphicGradient.baseColor)
+  const [showBezel, setShowBezel] = useState(true)
   const addScreenshotsInputRef = useRef<ScreenshotFileInputHandle>(null)
 
   const gradientConfig = useMemo(
@@ -41,7 +42,7 @@ export const App = () => {
   )
 
   const handleExport = async (selectedFormatIds: string[]) => {
-    await exportAssets(screenshots, selectedFormatIds, gradientConfig)
+    await exportAssets(screenshots, selectedFormatIds, gradientConfig, showBezel)
   }
 
   useBeforeUnload(hasScreenshots)
@@ -83,7 +84,9 @@ export const App = () => {
                 <HeaderToolbar
                   disabled={!hasScreenshots}
                   gradientBaseColor={gradientBaseColor}
+                  showBezel={showBezel}
                   onGradientBaseColorChange={setGradientBaseColor}
+                  onShowBezelChange={setShowBezel}
                   onAddScreenshotsClick={() => {
                     addScreenshotsInputRef.current?.open()
                   }}
@@ -101,6 +104,7 @@ export const App = () => {
         screenshots={screenshots}
         platform={platform}
         gradientConfig={gradientConfig}
+        showBezel={showBezel}
         onSelect={selectScreenshots}
         onReplace={replaceScreenshot}
         onDelete={deleteScreenshot}

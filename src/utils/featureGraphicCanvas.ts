@@ -8,7 +8,7 @@ interface ImageLayout {
   borderRadius: number
 }
 
-interface ContainImageRect {
+export interface ContainImageRect {
   drawX: number
   drawY: number
   drawWidth: number
@@ -69,7 +69,7 @@ export function drawRadialBackground(
   context.fillRect(0, 0, width, height)
 }
 
-function getContainedImageRect(
+export function getContainedImageRect(
   sourceWidth: number,
   sourceHeight: number,
   layout: ImageLayout,
@@ -85,33 +85,61 @@ function getContainedImageRect(
   }
 }
 
+export function drawDropShadow(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  borderRadius: number,
+): void {
+  const minSide = Math.min(width, height)
+  const shadowBlur = Math.max(16, Math.round(minSide * 0.045))
+  const shadowOffsetY = Math.max(5, Math.round(shadowBlur * 0.35))
+
+  context.save()
+  context.shadowColor = 'rgba(0, 0, 0, 0.18)'
+  context.shadowBlur = shadowBlur
+  context.shadowOffsetX = 0
+  context.shadowOffsetY = shadowOffsetY
+  context.fillStyle = 'rgba(0, 0, 0, 0.01)'
+  context.beginPath()
+  context.roundRect(x, y, width, height, borderRadius)
+  context.fill()
+  context.restore()
+}
+
 export function drawRoundedImageContain(
   context: CanvasRenderingContext2D,
   image: CanvasImageSource,
   sourceWidth: number,
   sourceHeight: number,
   layout: ImageLayout,
+  options: { drawShadow?: boolean } = {},
 ): void {
+  const { drawShadow = true } = options
   const { drawX, drawY, drawWidth, drawHeight } = getContainedImageRect(
     sourceWidth,
     sourceHeight,
     layout,
   )
 
-  const minSide = Math.min(drawWidth, drawHeight)
-  const shadowBlur = Math.max(18, Math.round(minSide * 0.05))
-  const shadowOffsetY = Math.max(6, Math.round(shadowBlur * 0.38))
+  if (drawShadow) {
+    const minSide = Math.min(drawWidth, drawHeight)
+    const shadowBlur = Math.max(18, Math.round(minSide * 0.05))
+    const shadowOffsetY = Math.max(6, Math.round(shadowBlur * 0.38))
 
-  context.save()
-  context.shadowColor = 'rgba(0, 0, 0, 0.33)'
-  context.shadowBlur = shadowBlur
-  context.shadowOffsetX = 0
-  context.shadowOffsetY = shadowOffsetY
-  context.fillStyle = '#ffffff'
-  context.beginPath()
-  context.roundRect(drawX, drawY, drawWidth, drawHeight, layout.borderRadius)
-  context.fill()
-  context.restore()
+    context.save()
+    context.shadowColor = 'rgba(0, 0, 0, 0.33)'
+    context.shadowBlur = shadowBlur
+    context.shadowOffsetX = 0
+    context.shadowOffsetY = shadowOffsetY
+    context.fillStyle = '#ffffff'
+    context.beginPath()
+    context.roundRect(drawX, drawY, drawWidth, drawHeight, layout.borderRadius)
+    context.fill()
+    context.restore()
+  }
 
   context.save()
   context.imageSmoothingEnabled = true

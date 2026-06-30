@@ -11,6 +11,7 @@ export interface FramesEditorProps {
   screenshots: Screenshot[]
   platform: Platform
   gradientConfig: GradientConfig
+  showBezel: boolean
   onReplace: (id: string, file: File) => void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
@@ -22,6 +23,7 @@ export const FramesEditor = ({
   screenshots,
   platform,
   gradientConfig,
+  showBezel,
   onReplace,
   onDelete,
   onSwap,
@@ -50,6 +52,7 @@ export const FramesEditor = ({
               fileName={screenshot.file.name}
               format={format}
               gradientConfig={gradientConfig}
+              showBezel={showBezel}
               title={screenshot.title}
               titlePosition={screenshot.titlePosition}
               onReplace={(file) => {

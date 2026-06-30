@@ -16,6 +16,7 @@ export interface ScreenshotFrameProps {
   fileName: string
   format: ExportFormat
   gradientConfig: GradientConfig
+  showBezel: boolean
   title: string
   titlePosition: TitlePosition
   onReplace: (file: File) => void
@@ -29,6 +30,7 @@ export const ScreenshotFrame = ({
   fileName,
   format,
   gradientConfig,
+  showBezel,
   title,
   titlePosition,
   onReplace,
@@ -119,6 +121,7 @@ export const ScreenshotFrame = ({
           screenshotUrl={screenshotUrl}
           format={format}
           gradientConfig={gradientConfig}
+          showBezel={showBezel}
           title={title}
           titlePosition={titlePosition}
         />

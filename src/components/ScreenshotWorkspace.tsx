@@ -9,6 +9,7 @@ export interface ScreenshotWorkspaceProps {
   screenshots: Screenshot[]
   platform: Platform
   gradientConfig: GradientConfig
+  showBezel: boolean
   onSelect: (screenshots: Screenshot[]) => void
   onReplace: (id: string, file: File) => void
   onDelete: (id: string) => void
@@ -21,6 +22,7 @@ export const ScreenshotWorkspace = ({
   screenshots,
   platform,
   gradientConfig,
+  showBezel,
   onSelect,
   onReplace,
   onDelete,
@@ -34,6 +36,7 @@ export const ScreenshotWorkspace = ({
         screenshots={screenshots}
         platform={platform}
         gradientConfig={gradientConfig}
+        showBezel={showBezel}
         onReplace={onReplace}
         onDelete={onDelete}
         onSwap={onSwap}
