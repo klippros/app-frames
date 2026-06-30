@@ -57,7 +57,7 @@ export async function exportAssets(screenshots: Screenshot[], selectedFormatIds:
 
   const images = await Promise.all(screenshots.map((screenshot) => loadImage(screenshot.url)))
   const zip = new JSZip()
-  const entries: Array<{ path: string; blob: Blob }> = []
+  const entries: { path: string; blob: Blob }[] = []
 
   for (const format of formats) {
     if (format.kind === 'feature-graphic') {

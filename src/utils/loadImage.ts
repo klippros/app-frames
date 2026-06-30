@@ -12,7 +12,9 @@ export function loadImage(url: string) {
       imageCache.set(url, image)
       resolve(image)
     }
-    image.onerror = () => reject(new Error(`Failed to load image: ${url}`))
+    image.onerror = () => {
+      reject(new Error(`Failed to load image: ${url}`))
+    }
     image.src = url
   })
 }

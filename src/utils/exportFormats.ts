@@ -86,7 +86,7 @@ export const PREVIEW_FORMAT_BY_PLATFORM: Record<Platform, ExportFormat> = {
 }
 
 export const DEFAULT_SELECTED_FORMAT_IDS = EXPORT_FORMATS.filter(
-  (format) => format.defaultChecked,
+  (format) => format.defaultChecked === true,
 ).map((format) => format.id)
 
 export function getFormatsByStore(store: ExportFormat['store']) {

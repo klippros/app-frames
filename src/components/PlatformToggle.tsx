@@ -14,7 +14,9 @@ export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
       aria-label="Show iOS previews"
       aria-pressed={platform === 'ios'}
       variant={platform === 'ios' ? 'solid' : 'outline'}
-      onClick={() => onChange('ios')}
+      onClick={() => {
+        onChange('ios')
+      }}
     >
       <FontAwesomeIcon icon={faApple} />
     </IconButton>
@@ -22,7 +24,9 @@ export const PlatformToggle = ({ platform, onChange }: PlatformToggleProps) => (
       aria-label="Show Android previews"
       aria-pressed={platform === 'android'}
       variant={platform === 'android' ? 'solid' : 'outline'}
-      onClick={() => onChange('android')}
+      onClick={() => {
+        onChange('android')
+      }}
     >
       <FontAwesomeIcon icon={faAndroid} />
     </IconButton>

@@ -1,8 +1,5 @@
-import {
-  featureGraphicConfig,
-  featureGraphicGradient,
-  type FeatureGraphicConfig,
-} from '../featureGraphicConfig'
+import type { FeatureGraphicConfig } from '../featureGraphicConfig'
+import { featureGraphicConfig, featureGraphicGradient } from '../featureGraphicConfig'
 import {
   createFeatureGraphicCanvas,
   drawRadialBackground,

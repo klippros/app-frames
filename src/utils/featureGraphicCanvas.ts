@@ -43,8 +43,8 @@ export function drawRadialBackground(
     Math.max(width, height) * 0.72,
   )
   highlight.addColorStop(0, `rgba(255,255,255,${gradientConfig.centerHighlightOpacity})`)
-  highlight.addColorStop(0.5, `${gradientConfig.baseColor}`)
-  highlight.addColorStop(1, `${gradientConfig.baseColor}`)
+  highlight.addColorStop(0.5, gradientConfig.baseColor)
+  highlight.addColorStop(1, gradientConfig.baseColor)
   context.fillStyle = highlight
   context.fillRect(0, 0, width, height)
 

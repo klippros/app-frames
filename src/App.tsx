@@ -14,13 +14,14 @@ export const App = () => {
   const [platform, setPlatform] = useState<Platform>('ios')
   const [exportModalOpen, setExportModalOpen] = useState(false)
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       for (const screenshot of screenshots) {
         URL.revokeObjectURL(screenshot.url)
       }
-    }
-  }, [screenshots])
+    },
+    [screenshots],
+  )
 
   const handleSelect = (nextScreenshots: Screenshot[]) => {
     for (const screenshot of screenshots) {
@@ -48,7 +49,9 @@ export const App = () => {
               <IconButton
                 aria-label="Export assets"
                 variant="outline"
-                onClick={() => setExportModalOpen(true)}
+                onClick={() => {
+                  setExportModalOpen(true)
+                }}
               >
                 <FontAwesomeIcon icon={faDownload} />
               </IconButton>

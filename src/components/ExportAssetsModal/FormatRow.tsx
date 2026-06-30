@@ -7,10 +7,19 @@ export interface FormatRowProps {
   onCheckedChange: (checked: boolean) => void
 }
 
+const toCheckedValue = (checked: boolean | 'indeterminate' | undefined): boolean => {
+  if (checked === true) {
+    return true
+  }
+  return false
+}
+
 export const FormatRow = ({ format, checked, onCheckedChange }: FormatRowProps) => (
   <Checkbox.Root
     checked={checked}
-    onCheckedChange={(event) => onCheckedChange(!!event.checked)}
+    onCheckedChange={(event) => {
+      onCheckedChange(toCheckedValue(event.checked))
+    }}
     alignItems="flex-start"
     py={2}
   >
@@ -19,13 +28,13 @@ export const FormatRow = ({ format, checked, onCheckedChange }: FormatRowProps) 
     <Stack gap={0.5} flex="1">
       <HStack gap={2} align="center">
         <Checkbox.Label fontWeight="medium">{format.label}</Checkbox.Label>
-        {format.recommended ? (
+        {format.recommended === true ? (
           <Badge colorPalette="blue" size="sm">
             Recommended
           </Badge>
         ) : null}
       </HStack>
-      {format.description ? (
+      {format.description !== undefined && format.description !== '' ? (
         <Text fontSize="sm" color="fg.muted">
           {format.description}
         </Text>

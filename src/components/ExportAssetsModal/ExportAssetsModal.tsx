@@ -35,7 +35,13 @@ export const ExportAssetsModal = ({ open, onOpenChange, onExport }: ExportAssets
   const googlePlayFormats = getFormatsByStore('google-play')
 
   return (
-    <Dialog.Root open={open} onOpenChange={(details) => onOpenChange(details.open)} size="lg">
+    <Dialog.Root
+      open={open}
+      onOpenChange={(details) => {
+        onOpenChange(details.open)
+      }}
+      size="lg"
+    >
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content>
@@ -51,7 +57,9 @@ export const ExportAssetsModal = ({ open, onOpenChange, onExport }: ExportAssets
                     key={format.id}
                     format={format}
                     checked={selectedIds.includes(format.id)}
-                    onCheckedChange={(checked) => toggleFormat(format.id, checked)}
+                    onCheckedChange={(checked) => {
+                      toggleFormat(format.id, checked)
+                    }}
                   />
                 ))}
               </Stack>
@@ -62,7 +70,9 @@ export const ExportAssetsModal = ({ open, onOpenChange, onExport }: ExportAssets
                     key={format.id}
                     format={format}
                     checked={selectedIds.includes(format.id)}
-                    onCheckedChange={(checked) => toggleFormat(format.id, checked)}
+                    onCheckedChange={(checked) => {
+                      toggleFormat(format.id, checked)
+                    }}
                   />
                 ))}
               </Stack>
@@ -73,7 +83,9 @@ export const ExportAssetsModal = ({ open, onOpenChange, onExport }: ExportAssets
               <Button variant="outline">Cancel</Button>
             </Dialog.ActionTrigger>
             <Button
-              onClick={handleExport}
+              onClick={() => {
+                void handleExport()
+              }}
               loading={isExporting}
               disabled={selectedIds.length === 0 || isExporting}
             >

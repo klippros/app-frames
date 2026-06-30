@@ -14,12 +14,13 @@ export const FrameCanvas = ({ screenshotUrl, format }: FrameCanvasProps) => {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) {
-      return
+      return undefined
     }
 
     let cancelled = false
 
-    loadImage(screenshotUrl).then((image) => {
+    void (async () => {
+      const image = await loadImage(screenshotUrl)
       if (cancelled) {
         return
       }
@@ -32,7 +33,7 @@ export const FrameCanvas = ({ screenshotUrl, format }: FrameCanvasProps) => {
       }
 
       drawFramedScreenshot(format.renderer, ctx, image, format.width, format.height)
-    })
+    })()
 
     return () => {
       cancelled = true
