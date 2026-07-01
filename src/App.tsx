@@ -1,4 +1,6 @@
-import { Box, Flex, Heading, HStack, Stack, Text } from '@chakra-ui/react'
+import { Box, Flex, HStack, Link } from '@chakra-ui/react'
+import appFramesLogo from './assets/app-frames-logo.svg'
+import klipprosLogo from './assets/klippros-logo.svg'
 import { useMemo, useRef, useState } from 'react'
 import { ContentContainer } from './components/ContentContainer'
 import { ExportAssetsModal } from './components/ExportAssetsModal/ExportAssetsModal'
@@ -13,7 +15,7 @@ import { useBeforeUnload } from './hooks/useBeforeUnload'
 import { useScreenshots } from './hooks/useScreenshots'
 import { ScreenshotWorkspace } from './components/ScreenshotWorkspace'
 import type { Platform } from './types'
-import { footerHeight } from './layout'
+import { footerHeight, toolbarControlSize } from './layout'
 import { exportAssets } from './utils/exportFrames'
 import { featureGraphicGradient } from './utils/featureGraphicConfig'
 
@@ -53,28 +55,32 @@ export const App = () => {
     <Box display="flex" flexDirection="column" h="100dvh" overflow="hidden" position="relative">
       <Box as="header" flexShrink={0} position="relative" zIndex={1}>
         <ContentContainer>
-          <Box pt={10} pb={4}>
-            <Flex align="center" gap={4}>
-              <HStack flex="1" gap={3} align="center" minW={0}>
-                <Stack gap={0} align="center">
-                  <Heading
-                    size="3xl"
-                    lineHeight="1"
-                    fontFamily="'Archivo Black', sans-serif"
-                    fontWeight="normal"
-                  >
-                    App Frames
-                  </Heading>
-                  <Text
-                    fontSize="sm"
-                    fontWeight="semibold"
-                    lineHeight="1.4"
-                    textAlign="center"
-                    color="whiteAlpha.700"
-                  >
-                    Klippros Studios
-                  </Text>
-                </Stack>
+          <Box py={4}>
+            <Flex align="center" gap={4} minH={toolbarControlSize}>
+              <HStack flex="1" gap={5} align="center" minW={0}>
+                <Link
+                  href="https://klippros.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  display="flex"
+                  alignItems="center"
+                  flexShrink={0}
+                  h={toolbarControlSize}
+                  transition="transform 0.15s ease"
+                  _hover={{ transform: 'scale(1.08)' }}
+                  aria-label="Klippros"
+                >
+                  <img
+                    src={klipprosLogo}
+                    alt=""
+                    style={{ height: toolbarControlSize, width: 'auto', display: 'block' }}
+                  />
+                </Link>
+                <img
+                  src={appFramesLogo}
+                  alt="App Frames"
+                  style={{ height: toolbarControlSize, width: 'auto', display: 'block' }}
+                />
               </HStack>
               <HStack flexShrink={0} gap={2} justify="center">
                 <PlatformToggle
