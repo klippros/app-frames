@@ -98,7 +98,14 @@ export async function exportAssets(
 
     for (const [index, screenshot] of screenshots.entries()) {
       entries.push(
-        await renderFramedScreenshot(format, screenshot, images[index], index, gradientConfig, showBezel),
+        await renderFramedScreenshot(
+          format,
+          screenshot,
+          images[index],
+          index,
+          gradientConfig,
+          showBezel,
+        ),
       )
     }
   }

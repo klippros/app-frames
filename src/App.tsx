@@ -50,13 +50,7 @@ export const App = () => {
   useBeforeUnload(hasScreenshots)
 
   return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      h="100dvh"
-      overflow="hidden"
-      position="relative"
-    >
+    <Box display="flex" flexDirection="column" h="100dvh" overflow="hidden" position="relative">
       <Box
         position="fixed"
         top="-12%"

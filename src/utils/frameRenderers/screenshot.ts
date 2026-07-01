@@ -1,9 +1,18 @@
 import type { RendererId, TitlePosition } from '../../types'
 import type { GradientConfig } from '../featureGraphicConfig'
 import { featureGraphicGradient } from '../featureGraphicConfig'
-import { getContainedImageRect, drawRadialBackground, drawRoundedImageContain } from '../featureGraphicCanvas'
+import {
+  getContainedImageRect,
+  drawRadialBackground,
+  drawRoundedImageContain,
+} from '../featureGraphicCanvas'
 import { getFrameLayout } from '../frameTitle'
-import { drawIphoneBezel, drawIphoneBezelShadow, getBezelLayout, loadIphoneBezelImages } from '../iphoneBezel'
+import {
+  drawIphoneBezel,
+  drawIphoneBezelShadow,
+  getBezelLayout,
+  loadIphoneBezelImages,
+} from '../iphoneBezel'
 import { drawFrameTitle } from './drawFrameTitle'
 
 export interface StoreScreenshotOptions {
@@ -43,11 +52,7 @@ export async function drawStoreScreenshot(
     borderRadius: screenshotRect.borderRadius,
   }
 
-  const containedRect = getContainedImageRect(
-    image.naturalWidth,
-    image.naturalHeight,
-    imageLayout,
-  )
+  const containedRect = getContainedImageRect(image.naturalWidth, image.naturalHeight, imageLayout)
 
   const bezelLayout = showBezel
     ? getBezelLayout(
