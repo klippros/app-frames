@@ -2,6 +2,8 @@
 
 A simple browser-based tool that turns in-app screenshots into App Store and Google Play marketing assets. No account, no backend — upload, customize, export.
 
+**Try it live:** [klippros.com/tools/app-frames](https://klippros.com/tools/app-frames)
+
 ## How it works
 
 1. Upload one or more screenshots
