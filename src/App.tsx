@@ -51,33 +51,6 @@ export const App = () => {
 
   return (
     <Box display="flex" flexDirection="column" h="100dvh" overflow="hidden" position="relative">
-      <Box
-        position="fixed"
-        top="-12%"
-        left="-8%"
-        width="420px"
-        height="420px"
-        borderRadius="full"
-        bg="rgba(99,102,241,0.22)"
-        filter="blur(120px)"
-        pointerEvents="none"
-        zIndex={0}
-        aria-hidden
-      />
-      <Box
-        position="fixed"
-        right="-8%"
-        bottom="-15%"
-        width="460px"
-        height="460px"
-        borderRadius="full"
-        bg="rgba(56,189,248,0.16)"
-        filter="blur(130px)"
-        pointerEvents="none"
-        zIndex={0}
-        aria-hidden
-      />
-
       <Box as="header" flexShrink={0} position="relative" zIndex={1}>
         <ContentContainer>
           <Box pt={10} pb={4}>

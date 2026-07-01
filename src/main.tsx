@@ -12,7 +12,7 @@ config.autoAddCss = false
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ChakraProvider value={system}>
-      <Theme appearance="dark">
+      <Theme appearance="dark" hasBackground={false}>
         <App />
       </Theme>
     </ChakraProvider>

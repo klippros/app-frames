@@ -76,7 +76,9 @@ const config = defineConfig({
   globalCss: {
     html: {
       color: 'fg',
-      bg: 'transparent',
+      backgroundColor: '#000000',
+      backgroundImage: 'radial-gradient(circle at top, #111136, #000000)',
+      backgroundAttachment: 'fixed',
       lineHeight: '1.5',
       colorPalette: 'gray',
     },
