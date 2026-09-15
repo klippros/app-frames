@@ -93,24 +93,50 @@ export const upsertProject = async (
     }
   }
 
+  const { data: existingRow, error: existingError } = await client
+    .from('projects')
+    .select('id')
+    .eq('id', input.id)
+    .maybeSingle()
+
+  if (existingError) {
+    throw existingError
+  }
+
+  const writable = {
+    name: input.name,
+    revision: input.revision,
+    global_settings: input.globalSettings,
+    client_updated_at: input.clientUpdatedAt,
+  }
+
+  if (existingRow) {
+    const { data, error } = await client
+      .from('projects')
+      .update(writable)
+      .eq('id', input.id)
+      .select('*')
+      .single()
+
+    if (error || !data) {
+      throw error ?? new Error('Project update returned no row')
+    }
+
+    return data as ProjectRow
+  }
+
+  // user_id comes from the column default auth.uid() — do not client-set ownership.
   const { data, error } = await client
     .from('projects')
-    .upsert(
-      {
-        id: input.id,
-        user_id: input.userId,
-        name: input.name,
-        revision: input.revision,
-        global_settings: input.globalSettings,
-        client_updated_at: input.clientUpdatedAt,
-      },
-      { onConflict: 'user_id,id' },
-    )
+    .insert({
+      id: input.id,
+      ...writable,
+    })
     .select('*')
     .single()
 
   if (error || !data) {
-    throw error ?? new Error('Project upsert returned no row')
+    throw error ?? new Error('Project insert returned no row')
   }
 
   return data as ProjectRow
@@ -120,29 +146,54 @@ export const upsertFrame = async (
   client: SupabaseClient,
   input: UpsertFrameInput,
 ): Promise<ProjectFrameRow> => {
+  const { data: existingRow, error: existingError } = await client
+    .from('project_frames')
+    .select('id')
+    .eq('id', input.id)
+    .maybeSingle()
+
+  if (existingError) {
+    throw existingError
+  }
+
+  const writable = {
+    frame_order: input.frameOrder,
+    settings: input.settings,
+    image_path: input.imagePath,
+    image_content_type: input.imageContentType,
+    image_byte_size: input.imageByteSize,
+    image_width: input.imageWidth ?? null,
+    image_height: input.imageHeight ?? null,
+    image_content_hash: input.imageContentHash ?? null,
+  }
+
+  if (existingRow) {
+    const { data, error } = await client
+      .from('project_frames')
+      .update(writable)
+      .eq('id', input.id)
+      .select('*')
+      .single()
+
+    if (error || !data) {
+      throw error ?? new Error('Frame update returned no row')
+    }
+
+    return data as ProjectFrameRow
+  }
+
   const { data, error } = await client
     .from('project_frames')
-    .upsert(
-      {
-        id: input.id,
-        user_id: input.userId,
-        project_id: input.projectId,
-        frame_order: input.frameOrder,
-        settings: input.settings,
-        image_path: input.imagePath,
-        image_content_type: input.imageContentType,
-        image_byte_size: input.imageByteSize,
-        image_width: input.imageWidth ?? null,
-        image_height: input.imageHeight ?? null,
-        image_content_hash: input.imageContentHash ?? null,
-      },
-      { onConflict: 'user_id,id' },
-    )
+    .insert({
+      id: input.id,
+      project_id: input.projectId,
+      ...writable,
+    })
     .select('*')
     .single()
 
   if (error || !data) {
-    throw error ?? new Error('Frame upsert returned no row')
+    throw error ?? new Error('Frame insert returned no row')
   }
 
   return data as ProjectFrameRow
