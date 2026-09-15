@@ -44,7 +44,8 @@
     "import/exports-last": "off",
     "import/no-unassigned-import": "off",
     "eslint/no-duplicate-imports": "off",
-    "promise/avoid-new": "off"
+    "promise/avoid-new": "off",
+    "react/jsx-handler-names": "off"
   },
   "overrides": [
     {
@@ -70,6 +71,12 @@
         "typescript/prefer-promise-reject-errors": "off",
         "typescript/restrict-template-expressions": "off",
         "import/consistent-type-specifier-style": "off"
+      }
+    },
+    {
+      "files": ["src/components/EditorApp.tsx"],
+      "rules": {
+        "import/max-dependencies": "off"
       }
     }
   ]

@@ -9,6 +9,7 @@ import {
   workspaceReducer,
 } from '../workspace/workspaceReducer'
 import { useProjectSync } from './useProjectSync'
+import { flushProjectSync, queueWorkspaceSave } from '../lib/sync/projectSync'
 
 export const useWorkspace = () => {
   const [workspace, dispatch] = useReducer(workspaceReducer, undefined, createEmptySketch)
@@ -102,6 +103,23 @@ export const useWorkspace = () => {
     dispatch({ type: 'SET_PROJECT_META', id, name, ownerId })
   }, [])
 
+  const promoteToProject = useCallback(
+    async (name: string, ownerId: string) => {
+      const projectId = crypto.randomUUID()
+      const action = {
+        type: 'SET_PROJECT_META' as const,
+        id: projectId,
+        name,
+        ownerId,
+      }
+      const next = workspaceReducer(workspace, action)
+      dispatch(action)
+      await queueWorkspaceSave(ownerId, next)
+      await flushProjectSync()
+    },
+    [workspace],
+  )
+
   const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace)
 
   return {
@@ -127,6 +145,7 @@ export const useWorkspace = () => {
     resetWorkspace,
     loadWorkspace,
     setProjectMeta,
+    promoteToProject,
     saveNow,
   }
 }

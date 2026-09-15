@@ -12,11 +12,13 @@ export interface HeaderEditorControlsProps {
   platform: Platform
   gradientBaseColor: string
   showBezel: boolean
+  showSaveProject?: boolean
   onPlatformChange: (platform: Platform) => void
   onGradientBaseColorChange: (baseColor: string) => void
   onShowBezelChange: (showBezel: boolean) => void
   onAddScreenshots: (screenshots: Screenshot[]) => void
   onExportClick: () => void
+  onSaveProjectClick?: () => void
 }
 
 export const HeaderEditorControls = ({
@@ -25,11 +27,13 @@ export const HeaderEditorControls = ({
   platform,
   gradientBaseColor,
   showBezel,
+  showSaveProject = false,
   onPlatformChange,
   onGradientBaseColorChange,
   onShowBezelChange,
   onAddScreenshots,
   onExportClick,
+  onSaveProjectClick,
 }: HeaderEditorControlsProps) => {
   const addScreenshotsInputRef = useRef<ScreenshotFileInputHandle>(null)
 
@@ -50,12 +54,14 @@ export const HeaderEditorControls = ({
           disabled={!hasScreenshots}
           gradientBaseColor={gradientBaseColor}
           showBezel={showBezel}
+          showSaveProject={showSaveProject}
           onGradientBaseColorChange={onGradientBaseColorChange}
           onShowBezelChange={onShowBezelChange}
           onAddScreenshotsClick={() => {
             addScreenshotsInputRef.current?.open()
           }}
           onExportClick={onExportClick}
+          onSaveProjectClick={onSaveProjectClick}
         />
       </HStack>
     </>
