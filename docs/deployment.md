@@ -13,6 +13,21 @@
 - Prefer CAPTCHA / bot protection and default auth rate limits for email OTP.
 - Google sign-in opens a separate window so the editor tab keeps in-memory sketches.
 
+### Local Supabase + Mailpit
+
+`supabase/config.toml` points auth at the Vite app:
+
+- `site_url`: `http://127.0.0.1:5173/tools/app-frames/`
+- `additional_redirect_urls`: callback URLs for `127.0.0.1` and `localhost`
+
+After changing those values, restart local Supabase (`supabase stop && supabase start`)
+and request a new magic link. The Mailpit link’s `redirect_to` must be the Vite
+callback (not `:3000`), for example:
+
+`...&redirect_to=http://127.0.0.1:5173/tools/app-frames/auth/callback`
+
+Open the app at the same host you allowlisted (`127.0.0.1` vs `localhost`).
+
 ## Content Security Policy (recommended)
 
 Allow the app origin plus your Supabase project:

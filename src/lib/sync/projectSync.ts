@@ -148,6 +148,7 @@ const processItem = async (client: SupabaseClient, item: QueuedProjectWrite): Pr
       const payload = item.payload
       await upsertProject(client, {
         id: String(payload.id),
+        userId: item.userId,
         name: String(payload.name),
         revision: Number(payload.revision),
         globalSettings: payload.globalSettings as Record<string, unknown>,
@@ -169,6 +170,7 @@ const processItem = async (client: SupabaseClient, item: QueuedProjectWrite): Pr
       try {
         await upsertFrame(client, {
           id: String(payload.id),
+          userId: item.userId,
           projectId: String(payload.projectId),
           frameOrder: Number(payload.frameOrder),
           settings: payload.settings as Record<string, unknown>,

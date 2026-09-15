@@ -4,6 +4,7 @@ import { PROJECT_IMAGES_BUCKET } from '../supabase/schema'
 
 export interface UpsertProjectInput {
   id: string
+  userId: string
   name: string
   revision: number
   globalSettings: Record<string, unknown>
@@ -13,6 +14,7 @@ export interface UpsertProjectInput {
 
 export interface UpsertFrameInput {
   id: string
+  userId: string
   projectId: string
   frameOrder: number
   settings: Record<string, unknown>
@@ -96,6 +98,7 @@ export const upsertProject = async (
     .upsert(
       {
         id: input.id,
+        user_id: input.userId,
         name: input.name,
         revision: input.revision,
         global_settings: input.globalSettings,
@@ -122,6 +125,7 @@ export const upsertFrame = async (
     .upsert(
       {
         id: input.id,
+        user_id: input.userId,
         project_id: input.projectId,
         frame_order: input.frameOrder,
         settings: input.settings,

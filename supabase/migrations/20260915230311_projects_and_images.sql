@@ -75,6 +75,7 @@ grant update (display_name, updated_at) on public.profiles to authenticated;
 grant select on public.projects to authenticated;
 grant insert (
   id,
+  user_id,
   name,
   revision,
   global_settings,
@@ -91,6 +92,7 @@ grant delete on public.projects to authenticated;
 grant select on public.project_frames to authenticated;
 grant insert (
   id,
+  user_id,
   project_id,
   frame_order,
   settings,
