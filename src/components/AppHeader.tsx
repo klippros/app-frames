@@ -70,7 +70,7 @@ export const AppHeader = ({
           syncMessage={syncMessage}
         />
         {trailing}
-        <AuthControls />
+        <AuthControls syncStatus={syncStatus} />
       </HStack>
     </Flex>
   </ContentContainer>

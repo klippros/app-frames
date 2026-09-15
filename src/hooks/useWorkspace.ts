@@ -1,18 +1,23 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import type { Platform, Screenshot } from '../types'
 import { featureGraphicGradient } from '../utils/featureGraphicConfig'
+import { clearImageCache } from '../utils/loadImage'
 import { normalizeImageFile } from '../utils/normalizeImage'
+import { flushProjectSync, queueWorkspaceSave, stopProjectSync } from '../lib/sync/projectSync'
 import { createEmptySketch } from '../workspace/types'
 import {
   frameToScreenshot,
   screenshotToFrame,
   workspaceReducer,
 } from '../workspace/workspaceReducer'
+import { useAuth } from './authContext'
+import { AuthStatus } from '../types/auth'
 import { useProjectSync } from './useProjectSync'
-import { flushProjectSync, queueWorkspaceSave } from '../lib/sync/projectSync'
 
 export const useWorkspace = () => {
   const [workspace, dispatch] = useReducer(workspaceReducer, undefined, createEmptySketch)
+  const { authStatus, user } = useAuth()
+  const previousUserId = useRef<string | null>(null)
 
   useEffect(
     () => () => {
@@ -22,6 +27,25 @@ export const useWorkspace = () => {
     },
     [workspace.frames],
   )
+
+  useEffect(() => {
+    const nextUserId = user?.id ?? null
+    const previous = previousUserId.current
+
+    if (previous !== null && previous !== nextUserId) {
+      stopProjectSync()
+      dispatch({ type: 'RESET' })
+      clearImageCache()
+    }
+
+    if (previous !== null && authStatus === AuthStatus.Anonymous && nextUserId === null) {
+      stopProjectSync()
+      dispatch({ type: 'RESET' })
+      clearImageCache()
+    }
+
+    previousUserId.current = nextUserId
+  }, [authStatus, user?.id])
 
   const screenshots = useMemo(() => workspace.frames.map(frameToScreenshot), [workspace.frames])
 

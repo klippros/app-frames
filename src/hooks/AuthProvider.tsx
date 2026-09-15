@@ -10,6 +10,7 @@ import { isSupabaseConfigured, supabaseClient } from '../lib/supabase/client'
 import { AuthStatus } from '../types/auth'
 import type { UserProfile } from '../types/auth'
 import { AuthContext } from './authContext'
+import { performSignOutCleanup } from '../lib/sync/signOutCleanup'
 
 const getFallbackDisplayName = (user: User): string => {
   const metadata = user.user_metadata as Record<string, unknown>
@@ -158,6 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null
     }
 
+    const previousUserId = currentUserId.current
+    await performSignOutCleanup(previousUserId)
     const { error } = await supabaseClient.auth.signOut()
     return error?.message ?? null
   }, [])

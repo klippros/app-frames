@@ -31,5 +31,14 @@ Create two authenticated users (A and B). Confirm:
 5. Uploading a non-WebP or >1.5 MiB object is rejected by the bucket limits.
 6. Frame `image_path` values that do not start with the caller’s user id fail the check constraint.
 
-Use the publishable/anon key with each user’s JWT. Never use the service-role key
-from the browser.
+## Manual security matrix
+
+Before production:
+
+1. Spoofed MIME / SVG upload is rejected client-side and by the bucket.
+2. Oversized / decompression-bomb images fail normalization limits.
+3. Expired sessions stop sync and cannot read private objects.
+4. User A cannot list/read/mutate User B projects or storage objects.
+5. Signing out offline still clears local project caches.
+6. Missing Supabase env vars hide auth/project UI and keep sketch-only mode.
+7. Malicious project names are stored as plain text and rendered safely.
