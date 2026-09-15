@@ -1,0 +1,126 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from './authContext'
+import { AuthStatus } from '../types/auth'
+import { hydrateProjectWorkspace } from '../lib/sync/projectSync'
+import { supabaseClient } from '../lib/supabase/client'
+import { isProjectId, projectPath } from '../lib/projectPath'
+import type { Workspace } from '../workspace/types'
+
+export const useProjectRoute = (
+  workspace: Workspace,
+  loadWorkspace: (workspace: Workspace) => void,
+  resetWorkspace: () => void,
+) => {
+  const { projectId: rawProjectId } = useParams<{ projectId?: string }>()
+  const routeProjectId = isProjectId(rawProjectId) ? rawProjectId : undefined
+  const navigate = useNavigate()
+  const { user, authStatus } = useAuth()
+  const [routeError, setRouteError] = useState<string | null>(null)
+  const [isOpening, setIsOpening] = useState(false)
+  const loadingIdRef = useRef<string | null>(null)
+  const previousRouteProjectId = useRef<string | undefined>(routeProjectId)
+  const activeWorkspaceId = workspace.kind === 'project' ? workspace.id : null
+
+  // URL is the source of truth: hydrate on project routes, clear when leaving them.
+  useEffect(() => {
+    const leftProjectRoute =
+      previousRouteProjectId.current !== undefined && routeProjectId === undefined
+    previousRouteProjectId.current = routeProjectId
+
+    if (rawProjectId !== undefined && routeProjectId === undefined) {
+      setRouteError('Invalid project link.')
+      void navigate('/', { replace: true })
+      return undefined
+    }
+
+    if (routeProjectId === undefined) {
+      if (leftProjectRoute) {
+        resetWorkspace()
+      }
+      setRouteError(null)
+      loadingIdRef.current = null
+      setIsOpening(false)
+      return undefined
+    }
+
+    // Already showing this project (e.g. just created / saved).
+    if (activeWorkspaceId === routeProjectId) {
+      setRouteError(null)
+      setIsOpening(false)
+      loadingIdRef.current = null
+      return undefined
+    }
+
+    if (authStatus === AuthStatus.Loading) {
+      return undefined
+    }
+
+    if (authStatus !== AuthStatus.Authenticated || !user || !supabaseClient) {
+      setRouteError('Sign in to open this project.')
+      return undefined
+    }
+
+    if (loadingIdRef.current === routeProjectId) {
+      return undefined
+    }
+
+    let cancelled = false
+    loadingIdRef.current = routeProjectId
+    setIsOpening(true)
+    setRouteError(null)
+
+    void (async () => {
+      try {
+        const next = await hydrateProjectWorkspace(supabaseClient, user.id, routeProjectId)
+        if (cancelled) {
+          return
+        }
+        if (!next) {
+          setRouteError('Project not found.')
+          void navigate('/', { replace: true })
+          return
+        }
+        loadWorkspace(next)
+        setRouteError(null)
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+        setRouteError(error instanceof Error ? error.message : 'Could not open project.')
+      } finally {
+        if (!cancelled && loadingIdRef.current === routeProjectId) {
+          loadingIdRef.current = null
+          setIsOpening(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    activeWorkspaceId,
+    authStatus,
+    loadWorkspace,
+    navigate,
+    rawProjectId,
+    resetWorkspace,
+    routeProjectId,
+    user,
+  ])
+
+  const openProject = useCallback(
+    (projectId: string) => {
+      void navigate(projectPath(projectId))
+    },
+    [navigate],
+  )
+
+  return {
+    routeProjectId,
+    routeError,
+    isOpening,
+    openProject,
+  }
+}

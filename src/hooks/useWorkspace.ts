@@ -140,11 +140,17 @@ export const useWorkspace = () => {
       dispatch(action)
       await queueWorkspaceSave(ownerId, next)
       await flushProjectSync()
+      dispatch({ type: 'MARK_SYNCED', revision: next.revision })
+      return projectId
     },
     [workspace],
   )
 
-  const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace)
+  const markSynced = useCallback((revision: number) => {
+    dispatch({ type: 'MARK_SYNCED', revision })
+  }, [])
+
+  const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace, markSynced)
 
   return {
     workspace,

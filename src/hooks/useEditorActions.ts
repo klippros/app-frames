@@ -1,7 +1,5 @@
 import { useCallback } from 'react'
 import { useAuth } from '../hooks/authContext'
-import { hydrateProjectWorkspace } from '../lib/sync/projectSync'
-import { supabaseClient } from '../lib/supabase/client'
 import type { Screenshot } from '../types'
 import type { GradientConfig } from '../utils/featureGraphicConfig'
 import { exportAssets } from '../utils/exportFrames'
@@ -14,8 +12,8 @@ export interface UseEditorActionsArgs {
   showBezel: boolean
   isConfigured: boolean
   hasScreenshots: boolean
-  loadWorkspace: (workspace: Workspace) => void
-  promoteToProject: (name: string, ownerId: string) => Promise<void>
+  promoteToProject: (name: string, ownerId: string) => Promise<string>
+  openProject: (projectId: string) => void
   onExportedSketch: () => void
 }
 
@@ -26,8 +24,8 @@ export const useEditorActions = ({
   showBezel,
   isConfigured,
   hasScreenshots,
-  loadWorkspace,
   promoteToProject,
+  openProject,
   onExportedSketch,
 }: UseEditorActionsArgs) => {
   const { user } = useAuth()
@@ -55,22 +53,17 @@ export const useEditorActions = ({
       if (!user) {
         throw new Error('Sign in to save a project.')
       }
-      await promoteToProject(name, user.id)
+      const projectId = await promoteToProject(name, user.id)
+      openProject(projectId)
     },
-    [promoteToProject, user],
+    [openProject, promoteToProject, user],
   )
 
   const handleOpenProject = useCallback(
-    async (projectId: string) => {
-      if (!user || !supabaseClient) {
-        return
-      }
-      const next = await hydrateProjectWorkspace(supabaseClient, user.id, projectId)
-      if (next) {
-        loadWorkspace(next)
-      }
+    (projectId: string) => {
+      openProject(projectId)
     },
-    [loadWorkspace, user],
+    [openProject],
   )
 
   return {

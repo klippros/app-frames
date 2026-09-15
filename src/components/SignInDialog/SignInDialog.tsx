@@ -3,6 +3,7 @@ import { faGoogle } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useState } from 'react'
 import type { SyntheticEvent } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/authContext'
 import { darkDialogContentProps } from '../darkDialogContentProps'
 
@@ -22,6 +23,8 @@ export const SignInDialog = ({
   description = 'Sign in optionally to save named projects and reopen them later. Sketches stay on this device until you save them.',
 }: SignInDialogProps) => {
   const { signInWithGoogle, signInWithEmail } = useAuth()
+  const location = useLocation()
+  const resolvedReturnTo = returnTo ?? `${location.pathname}${location.search}`
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
@@ -30,7 +33,7 @@ export const SignInDialog = ({
   const handleGoogleSignIn = async () => {
     setError(null)
     setSubmitting(true)
-    const signInError = await signInWithGoogle(returnTo)
+    const signInError = await signInWithGoogle(resolvedReturnTo)
     setSubmitting(false)
     setError(signInError)
   }
@@ -39,7 +42,7 @@ export const SignInDialog = ({
     event.preventDefault()
     setError(null)
     setSubmitting(true)
-    const signInError = await signInWithEmail(email, returnTo)
+    const signInError = await signInWithEmail(email, resolvedReturnTo)
     setSubmitting(false)
 
     if (signInError === null) {

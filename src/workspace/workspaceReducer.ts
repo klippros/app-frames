@@ -16,6 +16,7 @@ export type WorkspaceAction =
   | { type: 'SET_GRADIENT_BASE_COLOR'; gradientBaseColor: string }
   | { type: 'SET_SHOW_BEZEL'; showBezel: boolean }
   | { type: 'SET_PROJECT_META'; id: string; name: string; ownerId: string }
+  | { type: 'MARK_SYNCED'; revision: number }
 
 const revokeFrameUrls = (frames: WorkspaceFrame[]) => {
   for (const frame of frames) {
@@ -148,6 +149,12 @@ export const workspaceReducer = (state: Workspace, action: WorkspaceAction): Wor
         name: action.name,
         ownerId: action.ownerId,
         revision: state.revision + 1,
+        syncedRevision: null,
+      }
+    case 'MARK_SYNCED':
+      return {
+        ...state,
+        syncedRevision: action.revision,
       }
     default: {
       throw new Error(`Unhandled workspace action: ${(action as { type: string }).type}`)

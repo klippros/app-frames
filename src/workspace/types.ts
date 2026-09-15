@@ -45,6 +45,8 @@ export interface Workspace {
   name: string | null
   ownerId: string | null
   revision: number
+  /** Last revision confirmed on the server; null until the first successful sync. */
+  syncedRevision: number | null
   updatedAt: string | null
   globalSettings: GlobalSettingsV1
   frames: WorkspaceFrame[]
@@ -64,6 +66,7 @@ export const createEmptySketch = (): Workspace => ({
   name: null,
   ownerId: null,
   revision: 0,
+  syncedRevision: null,
   updatedAt: null,
   globalSettings: createDefaultGlobalSettings(),
   frames: [],

@@ -14,8 +14,6 @@ import {
   deleteFrame,
   deleteProject,
   deleteProjectImage,
-  downloadProjectImage,
-  getProjectWithFrames,
   listProjects,
   uploadProjectImage,
   upsertFrame,
@@ -83,7 +81,6 @@ export const queueWorkspaceSave = async (userId: string, workspace: Workspace): 
       revision: workspace.revision,
       globalSettings: workspace.globalSettings,
       clientUpdatedAt,
-      expectedRevision: Math.max(0, workspace.revision - 1) || undefined,
     },
   })
 
@@ -153,8 +150,6 @@ const processItem = async (client: SupabaseClient, item: QueuedProjectWrite): Pr
         revision: Number(payload.revision),
         globalSettings: payload.globalSettings as Record<string, unknown>,
         clientUpdatedAt: String(payload.clientUpdatedAt),
-        expectedRevision:
-          typeof payload.expectedRevision === 'number' ? payload.expectedRevision : undefined,
       })
       break
     }
@@ -245,50 +240,5 @@ export const flushProjectSync = (): Promise<void> => {
 
 export const retryProjectSync = (): Promise<void> => flushProjectSync()
 
-export const hydrateProjectWorkspace = async (
-  client: SupabaseClient,
-  userId: string,
-  projectId: string,
-): Promise<Workspace | null> => {
-  const loaded = await getProjectWithFrames(client, projectId)
-  if (!loaded || loaded.project.user_id !== userId) {
-    return null
-  }
-
-  const frames: WorkspaceFrame[] = []
-  for (const row of loaded.frames) {
-    const blob = await downloadProjectImage(client, row.image_path)
-    const file = new File([blob], `${row.id}.webp`, { type: 'image/webp' })
-    const key = blobKey(userId, projectId, row.id)
-    await putBlob(userId, key, file)
-    frames.push({
-      id: row.id,
-      order: row.frame_order,
-      settings: row.settings as unknown as WorkspaceFrame['settings'],
-      file,
-      url: URL.createObjectURL(file),
-      image: {
-        contentType: row.image_content_type,
-        byteSize: row.image_byte_size,
-        width: row.image_width ?? undefined,
-        height: row.image_height ?? undefined,
-        contentHash: row.image_content_hash ?? undefined,
-        storagePath: row.image_path,
-      },
-    })
-  }
-
-  return {
-    schemaVersion: 1,
-    kind: 'project',
-    id: loaded.project.id,
-    name: loaded.project.name,
-    ownerId: loaded.project.user_id,
-    revision: loaded.project.revision,
-    updatedAt: loaded.project.updated_at,
-    globalSettings: loaded.project.global_settings as unknown as Workspace['globalSettings'],
-    frames,
-  }
-}
-
 export { listProjects }
+export { hydrateProjectWorkspace } from './hydrateProjectWorkspace'

@@ -5,6 +5,9 @@ describe('resolveAuthReturnPath', () => {
   it('accepts relative in-app paths', () => {
     expect(resolveAuthReturnPath('/')).toBe('/')
     expect(resolveAuthReturnPath('/auth/callback')).toBe('/auth/callback')
+    expect(resolveAuthReturnPath('/projects/11111111-1111-1111-1111-111111111111')).toBe(
+      '/projects/11111111-1111-1111-1111-111111111111',
+    )
   })
 
   it('rejects open redirects', () => {

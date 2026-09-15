@@ -10,13 +10,15 @@ export interface ScreenshotWorkspaceProps {
   platform: Platform
   gradientConfig: GradientConfig
   showBezel: boolean
+  projectsListKey?: number
+  openingProjectId?: string | null
   onSelect: (screenshots: Screenshot[]) => void
   onReplace: (id: string, file: File) => void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
   onTitleChange: (id: string, title: string) => void
   onToggleTitlePosition: (id: string) => void
-  onOpenProject: (projectId: string) => Promise<void>
+  onOpenProject: (projectId: string) => void
   onCreateProject: () => void
 }
 
@@ -25,6 +27,8 @@ export const ScreenshotWorkspace = ({
   platform,
   gradientConfig,
   showBezel,
+  projectsListKey = 0,
+  openingProjectId = null,
   onSelect,
   onReplace,
   onDelete,
@@ -50,6 +54,8 @@ export const ScreenshotWorkspace = ({
     ) : (
       <MainContent>
         <WelcomeScreen
+          projectsListKey={projectsListKey}
+          openingProjectId={openingProjectId}
           onSelectScreenshots={onSelect}
           onOpenProject={onOpenProject}
           onCreateProject={onCreateProject}

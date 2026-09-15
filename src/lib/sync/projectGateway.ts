@@ -9,7 +9,6 @@ export interface UpsertProjectInput {
   revision: number
   globalSettings: Record<string, unknown>
   clientUpdatedAt: string
-  expectedRevision?: number
 }
 
 export interface UpsertFrameInput {
@@ -77,22 +76,6 @@ export const upsertProject = async (
   client: SupabaseClient,
   input: UpsertProjectInput,
 ): Promise<ProjectRow> => {
-  if (input.expectedRevision !== undefined) {
-    const { data: existing, error: readError } = await client
-      .from('projects')
-      .select('revision')
-      .eq('id', input.id)
-      .maybeSingle()
-
-    if (readError) {
-      throw readError
-    }
-
-    if (existing && existing.revision !== input.expectedRevision) {
-      throw new Error('Project revision conflict')
-    }
-  }
-
   const { data: existingRow, error: existingError } = await client
     .from('projects')
     .select('id')
@@ -125,7 +108,7 @@ export const upsertProject = async (
     return data as ProjectRow
   }
 
-  // user_id comes from the column default auth.uid() — do not client-set ownership.
+  // Ownership uses the column default auth.uid() — do not client-set user_id.
   const { data, error } = await client
     .from('projects')
     .insert({

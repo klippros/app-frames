@@ -10,12 +10,16 @@ import { ScreenshotPicker } from '../ScreenshotPicker'
 import { SignInDialog } from '../SignInDialog/SignInDialog'
 
 export interface WelcomeScreenProps {
+  projectsListKey?: number
+  openingProjectId?: string | null
   onSelectScreenshots: (screenshots: Screenshot[]) => void
-  onOpenProject: (projectId: string) => Promise<void>
+  onOpenProject: (projectId: string) => void
   onCreateProject: () => void
 }
 
 export const WelcomeScreen = ({
+  projectsListKey = 0,
+  openingProjectId = null,
   onSelectScreenshots,
   onOpenProject,
   onCreateProject,
@@ -24,7 +28,6 @@ export const WelcomeScreen = ({
   const [projects, setProjects] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [openingId, setOpeningId] = useState<string | null>(null)
   const [signInOpen, setSignInOpen] = useState(false)
 
   useEffect(() => {
@@ -57,7 +60,7 @@ export const WelcomeScreen = ({
     return () => {
       cancelled = true
     }
-  }, [authStatus, isConfigured])
+  }, [authStatus, isConfigured, projectsListKey])
 
   if (!isConfigured || authStatus !== AuthStatus.Authenticated) {
     return (
@@ -120,23 +123,16 @@ export const WelcomeScreen = ({
             key={project.id}
             variant="cancel"
             justifyContent="space-between"
-            disabled={openingId !== null}
+            disabled={openingProjectId !== null}
             title={project.name}
             onClick={() => {
-              setOpeningId(project.id)
-              void (async () => {
-                try {
-                  await onOpenProject(project.id)
-                } finally {
-                  setOpeningId(null)
-                }
-              })()
+              onOpenProject(project.id)
             }}
           >
             <Text as="span" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
               {project.name}
             </Text>
-            {openingId === project.id ? 'Opening…' : 'Open'}
+            {openingProjectId === project.id ? 'Opening…' : 'Open'}
           </Button>
         ))}
       </Stack>

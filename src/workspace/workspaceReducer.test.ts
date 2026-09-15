@@ -30,6 +30,7 @@ describe('createEmptySketch', () => {
     expect(workspace.id).toBeNull()
     expect(workspace.name).toBeNull()
     expect(workspace.ownerId).toBeNull()
+    expect(workspace.syncedRevision).toBeNull()
     expect(workspace.frames).toEqual([])
     expect(workspace.globalSettings).toMatchObject({
       version: 1,
@@ -177,6 +178,20 @@ describe('workspaceReducer', () => {
     expect(next.id).toBe('11111111-1111-1111-1111-111111111111')
     expect(next.name).toBe('My App')
     expect(next.ownerId).toBe('user-1')
+    expect(next.syncedRevision).toBeNull()
+  })
+
+  it('marks a revision as synced without bumping it', () => {
+    const project = workspaceReducer(createEmptySketch(), {
+      type: 'SET_PROJECT_META',
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'My App',
+      ownerId: 'user-1',
+    })
+    const synced = workspaceReducer(project, { type: 'MARK_SYNCED', revision: project.revision })
+
+    expect(synced.revision).toBe(project.revision)
+    expect(synced.syncedRevision).toBe(project.revision)
   })
 
   it('resets to an empty sketch and revokes frame URLs', () => {
