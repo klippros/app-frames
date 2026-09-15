@@ -21,7 +21,7 @@ export const AuthCallbackPage = () => {
     channel.postMessage({ type: 'signed-in' })
     channel.close()
 
-    if (window.opener !== null && !window.opener.closed) {
+    if (window.opener instanceof Window && !window.opener.closed) {
       window.close()
       return
     }

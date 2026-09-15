@@ -74,7 +74,7 @@
       }
     },
     {
-      "files": ["src/components/EditorApp.tsx"],
+      "files": ["src/components/EditorApp.tsx", "src/hooks/useWorkspace.ts"],
       "rules": {
         "import/max-dependencies": "off"
       }

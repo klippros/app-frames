@@ -29,10 +29,10 @@ export const performSignOutCleanup = async (userId: string | null): Promise<void
   stopProjectSync()
 
   try {
-    if (userId !== null) {
-      await clearUserData(userId)
-    } else {
+    if (userId === null) {
       await clearAllAppData()
+    } else {
+      await clearUserData(userId)
     }
   } catch {
     try {

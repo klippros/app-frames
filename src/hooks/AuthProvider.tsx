@@ -14,8 +14,10 @@ import { performSignOutCleanup } from '../lib/sync/signOutCleanup'
 
 const getFallbackDisplayName = (user: User): string => {
   const metadata = user.user_metadata as Record<string, unknown>
-  const fullName = metadata.full_name
-  const name = metadata.name
+  const { full_name: fullName, name } = metadata as {
+    full_name?: unknown
+    name?: unknown
+  }
   const metadataName = fullName ?? name
 
   if (typeof metadataName === 'string' && metadataName.trim() !== '') {
