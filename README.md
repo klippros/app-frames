@@ -13,7 +13,23 @@ A simple browser-based tool that turns in-app screenshots into App Store and Goo
 
 ## Privacy
 
-All processing happens in the browser. Your screenshots never leave your device.
+Sketches stay in the current browser tab until you close or reload it. When
+optional Supabase sign-in is configured, saving a named project uploads
+normalized frame images to your private account storage.
+
+## Optional Supabase auth
+
+Copy `.env.example` to `.env` and set:
+
+```bash
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+Leave both blank to keep the app fully anonymous. Configure Google OAuth and
+email magic-link providers in the Supabase dashboard, and allow the callback URL:
+
+`https://<host>/tools/app-frames/auth/callback`
 
 ## Development
 
@@ -24,6 +40,7 @@ pnpm install
 pnpm dev      # http://localhost:5173
 pnpm build
 pnpm preview
+pnpm test
 ```
 
 ## Contributing

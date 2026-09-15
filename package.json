@@ -23,9 +23,11 @@
     "@fortawesome/free-brands-svg-icons": "^7.3.0",
     "@fortawesome/free-solid-svg-icons": "^7.3.0",
     "@fortawesome/react-fontawesome": "^3.3.1",
+    "@supabase/supabase-js": "^2.116.0",
     "jszip": "^3.10.1",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@chakra-ui/cli": "^3.36.0",

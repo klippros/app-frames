@@ -1,14 +1,10 @@
-import { Flex, HStack, Link } from '@chakra-ui/react'
-import { useRef } from 'react'
-import appFramesLogo from '../assets/app-frames-logo.svg'
-import klipprosLogo from '../assets/klippros-logo.svg'
+import { Flex, HStack } from '@chakra-ui/react'
 import { toolbarControlSize } from '../layout'
 import type { Platform, Screenshot } from '../types'
+import { AuthControls } from './AuthControls'
+import { BrandLogos } from './BrandLogos'
 import { ContentContainer } from './ContentContainer'
-import { HeaderToolbar } from './HeaderToolbar'
-import { PlatformToggle } from './PlatformToggle'
-import type { ScreenshotFileInputHandle } from './ScreenshotFileInput'
-import { ScreenshotFileInput } from './ScreenshotFileInput'
+import { HeaderEditorControls } from './HeaderEditorControls'
 
 export interface AppHeaderProps {
   hasScreenshots: boolean
@@ -34,63 +30,25 @@ export const AppHeader = ({
   onShowBezelChange,
   onAddScreenshots,
   onExportClick,
-}: AppHeaderProps) => {
-  const addScreenshotsInputRef = useRef<ScreenshotFileInputHandle>(null)
-
-  return (
-    <ContentContainer>
-      <ScreenshotFileInput
-        ref={addScreenshotsInputRef}
-        existingScreenshotCount={screenshotCount}
-        onSelect={onAddScreenshots}
+}: AppHeaderProps) => (
+  <ContentContainer>
+    <Flex py={4} align="center" gap={4} minH={toolbarControlSize}>
+      <BrandLogos />
+      <HeaderEditorControls
+        hasScreenshots={hasScreenshots}
+        screenshotCount={screenshotCount}
+        platform={platform}
+        gradientBaseColor={gradientBaseColor}
+        showBezel={showBezel}
+        onPlatformChange={onPlatformChange}
+        onGradientBaseColorChange={onGradientBaseColorChange}
+        onShowBezelChange={onShowBezelChange}
+        onAddScreenshots={onAddScreenshots}
+        onExportClick={onExportClick}
       />
-      <Flex py={4} align="center" gap={4} minH={toolbarControlSize}>
-        <HStack flex="1" gap={5} align="center" minW={0}>
-          <Link
-            href="https://klippros.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            display="flex"
-            alignItems="center"
-            flexShrink={0}
-            h={toolbarControlSize}
-            transition="transform 0.15s ease"
-            _hover={{ transform: 'scale(1.08)' }}
-            aria-label="Klippros"
-          >
-            <img
-              src={klipprosLogo}
-              alt=""
-              style={{ height: toolbarControlSize, width: 'auto', display: 'block' }}
-            />
-          </Link>
-          <img
-            src={appFramesLogo}
-            alt="App Frames"
-            style={{ height: toolbarControlSize, width: 'auto', display: 'block' }}
-          />
-        </HStack>
-        <HStack flexShrink={0} gap={2} justify="center">
-          <PlatformToggle
-            disabled={!hasScreenshots}
-            platform={platform}
-            onChange={onPlatformChange}
-          />
-        </HStack>
-        <HStack flex="1" gap={2} align="center" justify="flex-end" minW={0}>
-          <HeaderToolbar
-            disabled={!hasScreenshots}
-            gradientBaseColor={gradientBaseColor}
-            showBezel={showBezel}
-            onGradientBaseColorChange={onGradientBaseColorChange}
-            onShowBezelChange={onShowBezelChange}
-            onAddScreenshotsClick={() => {
-              addScreenshotsInputRef.current?.open()
-            }}
-            onExportClick={onExportClick}
-          />
-        </HStack>
-      </Flex>
-    </ContentContainer>
-  )
-}
+      <HStack flex="1" gap={3} align="center" justify="flex-end" minW={0}>
+        <AuthControls />
+      </HStack>
+    </Flex>
+  </ContentContainer>
+)
