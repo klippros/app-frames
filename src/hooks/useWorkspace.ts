@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react'
 import type { Platform, Screenshot } from '../types'
 import { featureGraphicGradient } from '../utils/featureGraphicConfig'
+import { normalizeImageFile } from '../utils/normalizeImage'
 import { createEmptySketch } from '../workspace/types'
 import {
   frameToScreenshot,
@@ -45,12 +46,19 @@ export const useWorkspace = () => {
   }, [])
 
   const replaceScreenshot = useCallback((id: string, file: File) => {
-    dispatch({
-      type: 'REPLACE_FRAME',
-      id,
-      file,
-      url: URL.createObjectURL(file),
-    })
+    void (async () => {
+      try {
+        const normalized = await normalizeImageFile(file)
+        dispatch({
+          type: 'REPLACE_FRAME',
+          id,
+          file: normalized.file,
+          url: URL.createObjectURL(normalized.file),
+        })
+      } catch {
+        // Keep the existing frame when replacement normalization fails.
+      }
+    })()
   }, [])
 
   const deleteScreenshot = useCallback((id: string) => {

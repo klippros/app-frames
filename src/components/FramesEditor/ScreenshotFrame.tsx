@@ -75,12 +75,13 @@ export const ScreenshotFrame = ({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file === undefined || !file.type.startsWith('image/')) {
+    event.target.value = ''
+
+    if (file === undefined) {
       return
     }
 
     onReplace(file)
-    event.target.value = ''
   }
 
   const handlePreviewClick = () => {
