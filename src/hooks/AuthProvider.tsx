@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   AUTH_BROADCAST_CHANNEL,
@@ -12,8 +12,9 @@ import type { UserProfile } from '../types/auth'
 import { AuthContext } from './authContext'
 
 const getFallbackDisplayName = (user: User): string => {
-  const fullName: unknown = user.user_metadata.full_name
-  const name: unknown = user.user_metadata.name
+  const metadata = user.user_metadata as Record<string, unknown>
+  const fullName = metadata.full_name
+  const name = metadata.name
   const metadataName = fullName ?? name
 
   if (typeof metadataName === 'string' && metadataName.trim() !== '') {
@@ -24,29 +25,45 @@ const getFallbackDisplayName = (user: User): string => {
   return emailName !== undefined && emailName !== '' ? emailName : 'You'
 }
 
-const toProfile = (user: User): UserProfile => ({
-  userId: user.id,
-  displayName: getFallbackDisplayName(user),
-})
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [authStatus, setAuthStatus] = useState<AuthStatus>(
     isSupabaseConfigured ? AuthStatus.Loading : AuthStatus.Anonymous,
   )
+  const currentUserId = useRef<string | null>(null)
 
-  const applyUser = useCallback((nextUser: User | null) => {
+  const applyUser = useCallback(async (nextUser: User | null) => {
+    currentUserId.current = nextUser?.id ?? null
     setUser(nextUser)
 
-    if (nextUser === null) {
+    if (nextUser === null || supabaseClient === null) {
       setProfile(null)
       setAuthStatus(AuthStatus.Anonymous)
       return
     }
 
-    setProfile(toProfile(nextUser))
     setAuthStatus(AuthStatus.Authenticated)
+    const userId = nextUser.id
+    const { data } = await supabaseClient
+      .from('profiles')
+      .select('user_id, display_name')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (currentUserId.current !== userId) {
+      return
+    }
+
+    const displayName =
+      typeof data?.display_name === 'string' && data.display_name.trim() !== ''
+        ? data.display_name
+        : getFallbackDisplayName(nextUser)
+
+    setProfile({
+      userId,
+      displayName,
+    })
   }, [])
 
   useEffect(() => {
@@ -57,14 +74,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const client = supabaseClient
     const initializeSession = async () => {
       const { data } = await client.auth.getSession()
-      applyUser(data.session?.user ?? null)
+      void applyUser(data.session?.user ?? null)
     }
     void initializeSession()
 
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((_event, session) => {
-      applyUser(session?.user ?? null)
+      void applyUser(session?.user ?? null)
     })
 
     const channel = new BroadcastChannel(AUTH_BROADCAST_CHANNEL)
@@ -75,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       void (async () => {
         const { data } = await client.auth.getSession()
-        applyUser(data.session?.user ?? null)
+        void applyUser(data.session?.user ?? null)
       })()
     }
 

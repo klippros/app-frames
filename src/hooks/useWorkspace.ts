@@ -8,6 +8,7 @@ import {
   screenshotToFrame,
   workspaceReducer,
 } from '../workspace/workspaceReducer'
+import { useProjectSync } from './useProjectSync'
 
 export const useWorkspace = () => {
   const [workspace, dispatch] = useReducer(workspaceReducer, undefined, createEmptySketch)
@@ -101,6 +102,8 @@ export const useWorkspace = () => {
     dispatch({ type: 'SET_PROJECT_META', id, name, ownerId })
   }, [])
 
+  const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace)
+
   return {
     workspace,
     screenshots,
@@ -109,6 +112,8 @@ export const useWorkspace = () => {
     gradientBaseColor: workspace.globalSettings.gradientBaseColor,
     showBezel: workspace.globalSettings.showBezel,
     gradientConfig,
+    syncStatus,
+    syncMessage,
     selectScreenshots,
     addScreenshots,
     replaceScreenshot,
@@ -122,5 +127,6 @@ export const useWorkspace = () => {
     resetWorkspace,
     loadWorkspace,
     setProjectMeta,
+    saveNow,
   }
 }
