@@ -31,6 +31,9 @@ email magic-link providers in the Supabase dashboard, and allow the callback URL
 
 `https://<host>/tools/app-frames/auth/callback`
 
+See [docs/supabase-security.md](docs/supabase-security.md) for migrations, RLS,
+and the two-user isolation checklist.
+
 ## Development
 
 Prerequisites: Node.js, pnpm 10+.
