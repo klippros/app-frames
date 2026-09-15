@@ -14,12 +14,26 @@ import { useAuth } from './authContext'
 
 const AUTOSAVE_MS = 800
 
+interface KnownFrame {
+  id: string
+  imagePath?: string
+}
+
+const framesSnapshot = (workspace: Workspace): KnownFrame[] =>
+  workspace.frames.map((frame) => ({
+    id: frame.id,
+    imagePath: frame.image?.storagePath,
+  }))
+
 export const useProjectSync = (workspace: Workspace, onSynced?: (revision: number) => void) => {
   const { authStatus, user, isConfigured } = useAuth()
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle)
   const [syncMessage, setSyncMessage] = useState<string | undefined>()
   const saveTimer = useRef<number | null>(null)
   const lastQueuedRevision = useRef<number | null>(null)
+  const knownFramesRef = useRef<KnownFrame[]>([])
+  const pendingFramesRef = useRef<KnownFrame[] | null>(null)
+  const knownProjectIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!isConfigured || authStatus !== AuthStatus.Authenticated || !user || !supabaseClient) {
@@ -32,6 +46,10 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
       setSyncStatus(status)
       setSyncMessage(message)
       if (status === SyncStatus.Synced && lastQueuedRevision.current !== null) {
+        if (pendingFramesRef.current !== null) {
+          knownFramesRef.current = pendingFramesRef.current
+          pendingFramesRef.current = null
+        }
         onSynced?.(lastQueuedRevision.current)
       }
     })
@@ -55,6 +73,25 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
     }
   }, [authStatus, isConfigured, onSynced, user])
 
+  // Seed known frames from a clean server-backed workspace (hydrate / after sync).
+  useEffect(() => {
+    if (workspace.kind !== 'project' || workspace.id === null) {
+      knownFramesRef.current = []
+      knownProjectIdRef.current = null
+      return
+    }
+
+    if (workspace.id !== knownProjectIdRef.current) {
+      knownProjectIdRef.current = workspace.id
+      knownFramesRef.current = framesSnapshot(workspace)
+      return
+    }
+
+    if (workspace.revision === workspace.syncedRevision) {
+      knownFramesRef.current = framesSnapshot(workspace)
+    }
+  }, [workspace])
+
   useEffect(() => {
     if (
       workspace.kind !== 'project' ||
@@ -76,8 +113,13 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
 
     saveTimer.current = window.setTimeout(() => {
       void (async () => {
+        const currentIds = new Set(workspace.frames.map((frame) => frame.id))
+        const deletedFrames = knownFramesRef.current.filter((frame) => !currentIds.has(frame.id))
+        const nextKnown = framesSnapshot(workspace)
+
         lastQueuedRevision.current = workspace.revision
-        await queueWorkspaceSave(user.id, workspace)
+        pendingFramesRef.current = nextKnown
+        await queueWorkspaceSave(user.id, workspace, deletedFrames)
         await flushProjectSync()
       })()
     }, AUTOSAVE_MS)
@@ -93,10 +135,15 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
     if (!user || workspace.kind !== 'project') {
       return
     }
+    const currentIds = new Set(workspace.frames.map((frame) => frame.id))
+    const deletedFrames = knownFramesRef.current.filter((frame) => !currentIds.has(frame.id))
+    const nextKnown = framesSnapshot(workspace)
+
     lastQueuedRevision.current = workspace.revision
-    await queueWorkspaceSave(user.id, workspace)
+    pendingFramesRef.current = nextKnown
+    await queueWorkspaceSave(user.id, workspace, deletedFrames)
     await flushProjectSync()
-    // MARK_SYNCED is driven by the SyncStatus.Synced callback, not assumed success.
+    // MARK_SYNCED / known-frame advance is driven by SyncStatus.Synced.
   }, [user, workspace])
 
   return {

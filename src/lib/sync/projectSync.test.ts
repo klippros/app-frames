@@ -88,6 +88,35 @@ describe('projectSync', () => {
     expect(idb.putBlob).toHaveBeenCalled()
   })
 
+  it('queues deletes for removed frames before upserts', async () => {
+    const idb = await import('./idb')
+    const workspace: Workspace = {
+      ...createEmptySketch(),
+      kind: 'project',
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'Launch',
+      ownerId: '11111111-1111-1111-1111-111111111111',
+      revision: 3,
+      frames: [],
+    }
+
+    await queueWorkspaceSave('11111111-1111-1111-1111-111111111111', workspace, [
+      {
+        id: '33333333-3333-3333-3333-333333333333',
+        imagePath: 'user/project/frame/hash.webp',
+      },
+    ])
+
+    expect(idb.enqueueWrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'delete-frame',
+        payload: expect.objectContaining({
+          frameId: '33333333-3333-3333-3333-333333333333',
+        }),
+      }),
+    )
+  })
+
   it('flushes queued writes through the gateway and dequeues on success', async () => {
     const idb = await import('./idb')
     const file = new File([new Uint8Array([1, 2, 3])], 'frame.webp', { type: 'image/webp' })

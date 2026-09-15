@@ -3,6 +3,7 @@ import type { Workspace, WorkspaceFrame } from '../../workspace/types'
 import { buildProjectImagePath } from '../supabase/schema'
 import { hashBlob } from './contentHash'
 import {
+  deleteBlob,
   dequeueWrite,
   enqueueWrite,
   getBlob,
@@ -61,13 +62,21 @@ export const stopProjectSync = () => {
 const blobKey = (userId: string, projectId: string, frameId: string) =>
   `${userId}/${projectId}/${frameId}`
 
-export const queueWorkspaceSave = async (userId: string, workspace: Workspace): Promise<void> => {
+export const queueWorkspaceSave = async (
+  userId: string,
+  workspace: Workspace,
+  deletedFrames: readonly { id: string; imagePath?: string }[] = [],
+): Promise<void> => {
   if (workspace.kind !== 'project' || workspace.id === null || workspace.name === null) {
     return
   }
 
   const projectId = workspace.id
   const clientUpdatedAt = new Date().toISOString()
+
+  for (const deleted of deletedFrames) {
+    await queueFrameDelete(userId, projectId, deleted.id, deleted.imagePath)
+  }
 
   await enqueueWrite({
     id: crypto.randomUUID(),
@@ -129,6 +138,19 @@ export const queueFrameDelete = async (
   frameId: string,
   imagePath?: string,
 ): Promise<void> => {
+  const pending = await listQueueForUser(userId)
+  for (const item of pending) {
+    if (
+      item.projectId === projectId &&
+      item.kind === 'upsert-frame' &&
+      String(item.payload.id) === frameId
+    ) {
+      await dequeueWrite(item.id)
+    }
+  }
+
+  await deleteBlob(blobKey(userId, projectId, frameId)).catch(() => undefined)
+
   await enqueueWrite({
     id: crypto.randomUUID(),
     userId,

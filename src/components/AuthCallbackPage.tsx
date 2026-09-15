@@ -1,21 +1,21 @@
 import { Box, Button, Heading, Spinner, Stack, Text } from '@chakra-ui/react'
 import { useEffect } from 'react'
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/authContext'
-import { AUTH_BROADCAST_CHANNEL, resolveAuthReturnPath } from '../lib/auth/authRedirect'
+import { AUTH_BROADCAST_CHANNEL, consumeAuthReturnTo } from '../lib/auth/authRedirect'
 import { AuthStatus } from '../types/auth'
 import { ContentContainer } from './ContentContainer'
 
 export const AuthCallbackPage = () => {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { authStatus } = useAuth()
-  const returnTo = resolveAuthReturnPath(searchParams.get('next')) ?? '/'
 
   useEffect(() => {
     if (authStatus !== AuthStatus.Authenticated) {
       return
     }
+
+    const returnTo = consumeAuthReturnTo()
 
     const channel = new BroadcastChannel(AUTH_BROADCAST_CHANNEL)
     channel.postMessage({ type: 'signed-in' })
@@ -27,7 +27,7 @@ export const AuthCallbackPage = () => {
     }
 
     void navigate(returnTo, { replace: true })
-  }, [authStatus, navigate, returnTo])
+  }, [authStatus, navigate])
 
   return (
     <ContentContainer>

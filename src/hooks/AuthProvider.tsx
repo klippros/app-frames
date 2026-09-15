@@ -5,6 +5,7 @@ import {
   AUTH_BROADCAST_CHANNEL,
   AUTH_POPUP_NAME,
   buildAuthRedirectUrl,
+  rememberAuthReturnTo,
 } from '../lib/auth/authRedirect'
 import { isSupabaseConfigured, supabaseClient } from '../lib/supabase/client'
 import { AuthStatus } from '../types/auth'
@@ -110,10 +111,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return 'Sign-in is not configured.'
     }
 
+    rememberAuthReturnTo(returnTo)
+
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: buildAuthRedirectUrl(returnTo),
+        redirectTo: buildAuthRedirectUrl(),
         skipBrowserRedirect: true,
       },
     })
@@ -146,9 +149,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return 'Enter a valid email address.'
       }
 
+      rememberAuthReturnTo(returnTo)
+
       const { error } = await supabaseClient.auth.signInWithOtp({
         email: normalizedEmail,
-        options: { emailRedirectTo: buildAuthRedirectUrl(returnTo) },
+        options: { emailRedirectTo: buildAuthRedirectUrl() },
       })
 
       return error?.message ?? null

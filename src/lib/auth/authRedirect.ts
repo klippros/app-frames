@@ -11,17 +11,31 @@ export const resolveAuthReturnPath = (raw: string | null | undefined): string | 
   return raw
 }
 
-export const buildAuthRedirectUrl = (returnTo?: string | null): string => {
+const AUTH_RETURN_TO_KEY = 'app-frames-auth-return-to'
+
+/**
+ * Exact callback URL for Supabase allowlists. Do not append query params —
+ * GoTrue matches redirect URLs exactly, so `?next=` breaks sign-in.
+ */
+export const buildAuthRedirectUrl = (): string => {
   const baseUrlValue: unknown = import.meta.env.BASE_URL
   const baseUrl = typeof baseUrlValue === 'string' ? baseUrlValue : '/tools/app-frames/'
-  const callbackUrl = new URL(`${baseUrl}auth/callback`, window.location.origin)
+  return new URL(`${baseUrl}auth/callback`, window.location.origin).toString()
+}
+
+export const rememberAuthReturnTo = (returnTo?: string | null): void => {
   const safeReturnTo = resolveAuthReturnPath(returnTo ?? null)
-
-  if (safeReturnTo !== null) {
-    callbackUrl.searchParams.set('next', safeReturnTo)
+  if (safeReturnTo === null) {
+    sessionStorage.removeItem(AUTH_RETURN_TO_KEY)
+    return
   }
+  sessionStorage.setItem(AUTH_RETURN_TO_KEY, safeReturnTo)
+}
 
-  return callbackUrl.toString()
+export const consumeAuthReturnTo = (): string => {
+  const raw = sessionStorage.getItem(AUTH_RETURN_TO_KEY)
+  sessionStorage.removeItem(AUTH_RETURN_TO_KEY)
+  return resolveAuthReturnPath(raw) ?? '/'
 }
 
 export const AUTH_BROADCAST_CHANNEL = 'app-frames-auth'
