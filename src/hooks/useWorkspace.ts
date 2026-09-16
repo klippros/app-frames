@@ -8,7 +8,7 @@ import {
   PROJECT_LIMIT_MESSAGE,
   countProjects,
 } from '../lib/sync/projectGateway'
-import { stopProjectSync, syncWorkspace } from '../lib/sync/projectSync'
+import { getProjectSyncGeneration, stopProjectSync, syncWorkspace } from '../lib/sync/projectSync'
 import { supabaseClient } from '../lib/supabase/client'
 import { MAX_FRAMES_PER_PROJECT, MAX_PROJECTS_PER_USER } from '../lib/supabase/schema'
 import { createEmptySketch } from '../workspace/types'
@@ -187,7 +187,11 @@ export const useWorkspace = () => {
       }
       next = workspaceReducer(next, metaAction)
       dispatch(metaAction)
-      const synced = await syncWorkspace(ownerId, next)
+      const generation = getProjectSyncGeneration(ownerId)
+      if (generation === null) {
+        throw new Error('Project sync is not active for the authenticated user.')
+      }
+      const synced = await syncWorkspace(ownerId, next, undefined, generation)
       markSynced(synced.revision, synced.frameImages)
       return projectId
     },

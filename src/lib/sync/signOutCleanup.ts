@@ -35,13 +35,7 @@ const waitForFlush = async (
   }
 }
 
-export const performSignOutCleanup = async (
-  userId: string | null,
-): Promise<SignOutFlushOutcome> => {
-  const flushOutcome = await waitForFlush(flushProjectSync(), FLUSH_TIMEOUT_MS)
-
-  stopProjectSync()
-
+const clearLocalUserData = async (userId: string | null): Promise<void> => {
   try {
     if (userId === null) {
       await clearAllAppData()
@@ -55,6 +49,21 @@ export const performSignOutCleanup = async (
       // Best-effort cleanup.
     }
   }
+}
+
+/** Fail-closed cleanup for expiry and account replacement. Never flushes queued writes. */
+export const performSessionTransitionCleanup = async (userId: string): Promise<void> => {
+  stopProjectSync()
+  await clearLocalUserData(userId)
+}
+
+export const performSignOutCleanup = async (
+  userId: string | null,
+): Promise<SignOutFlushOutcome> => {
+  const flushOutcome = await waitForFlush(flushProjectSync(), FLUSH_TIMEOUT_MS)
+
+  stopProjectSync()
+  await clearLocalUserData(userId)
 
   return flushOutcome
 }

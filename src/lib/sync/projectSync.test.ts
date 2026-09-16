@@ -5,6 +5,7 @@ import { buildProjectImagePath } from '../supabase/schema'
 import * as gateway from './projectGateway'
 import {
   flushProjectSync,
+  getProjectSyncGeneration,
   ProjectSyncError,
   queueProjectDelete,
   queueWorkspaceSave,
@@ -498,5 +499,23 @@ describe('projectSync', () => {
     await expect(flushProjectSync()).resolves.toBeUndefined()
     expect(queue).toHaveLength(0)
     expect(gateway.deleteProject).toHaveBeenCalledTimes(2)
+  })
+
+  it('fails closed when the account changes while preparing an old save', async () => {
+    const idb = await import('./idb')
+    await startAndSettleInitialFlush()
+    vi.clearAllMocks()
+    const generation = getProjectSyncGeneration(USER_ID)
+    expect(generation).not.toBeNull()
+    vi.mocked(idb.putBlob).mockImplementationOnce(async () => {
+      stopProjectSync()
+      startProjectSync({} as never, 'user-b')
+    })
+
+    await expect(
+      syncWorkspace(USER_ID, createProjectWorkspace(), undefined, generation ?? undefined),
+    ).rejects.toThrow('authenticated session changed')
+    expect(idb.enqueueWrite).not.toHaveBeenCalled()
+    expect(gateway.saveProjectSnapshot).not.toHaveBeenCalled()
   })
 })

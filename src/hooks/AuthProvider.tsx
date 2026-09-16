@@ -8,10 +8,10 @@ import {
   rememberAuthReturnTo,
 } from '../lib/auth/authRedirect'
 import { isSupabaseConfigured, supabaseClient } from '../lib/supabase/client'
+import { performSessionTransitionCleanup, performSignOutCleanup } from '../lib/sync/signOutCleanup'
 import { AuthStatus } from '../types/auth'
 import type { UserProfile } from '../types/auth'
 import { AuthContext } from './authContext'
-import { performSignOutCleanup } from '../lib/sync/signOutCleanup'
 
 const getFallbackDisplayName = (user: User): string => {
   const metadata = user.user_metadata as Record<string, unknown>
@@ -36,9 +36,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isSupabaseConfigured ? AuthStatus.Loading : AuthStatus.Anonymous,
   )
   const currentUserId = useRef<string | null>(null)
+  const cleanupUserId = useRef<string | null>(null)
+  const transitionVersion = useRef(0)
+  const cleanupChain = useRef(Promise.resolve())
 
   const applyUser = useCallback(async (nextUser: User | null) => {
-    currentUserId.current = nextUser?.id ?? null
+    const version = ++transitionVersion.current
+    const nextUserId = nextUser?.id ?? null
+    const previousUserId = currentUserId.current ?? cleanupUserId.current
+
+    if (previousUserId !== null && previousUserId !== nextUserId) {
+      currentUserId.current = null
+      cleanupUserId.current = previousUserId
+      setUser(null)
+      setProfile(null)
+      setAuthStatus(AuthStatus.Loading)
+
+      const previousCleanup = cleanupChain.current
+      const cleanup = async () => {
+        await previousCleanup
+        await performSessionTransitionCleanup(previousUserId)
+      }
+      cleanupChain.current = cleanup()
+      await cleanupChain.current
+
+      if (transitionVersion.current !== version) {
+        return
+      }
+      cleanupUserId.current = null
+    }
+
+    currentUserId.current = nextUserId
     setUser(nextUser)
 
     if (nextUser === null || supabaseClient === null) {
@@ -168,6 +196,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const previousUserId = currentUserId.current
     await performSignOutCleanup(previousUserId)
+    ++transitionVersion.current
+    currentUserId.current = null
+    cleanupUserId.current = null
+    setUser(null)
+    setProfile(null)
+    setAuthStatus(AuthStatus.Anonymous)
     const { error } = await supabaseClient.auth.signOut()
     return error?.message ?? null
   }, [])

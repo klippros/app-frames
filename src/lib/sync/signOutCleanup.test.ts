@@ -61,4 +61,16 @@ describe('performSignOutCleanup', () => {
     expect(sync.stopProjectSync).toHaveBeenCalled()
     expect(idb.clearUserData).toHaveBeenCalledWith('user-1')
   })
+
+  it('does not flush old writes during account replacement or token expiry', async () => {
+    const { performSessionTransitionCleanup } = await import('./signOutCleanup')
+    const sync = await import('./projectSync')
+    const idb = await import('./idb')
+
+    await performSessionTransitionCleanup('user-1')
+
+    expect(sync.stopProjectSync).toHaveBeenCalledBefore(vi.mocked(idb.clearUserData))
+    expect(sync.flushProjectSync).not.toHaveBeenCalled()
+    expect(idb.clearUserData).toHaveBeenCalledWith('user-1')
+  })
 })

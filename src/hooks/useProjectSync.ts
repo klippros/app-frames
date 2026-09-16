@@ -3,6 +3,7 @@ import { AuthStatus } from '../types/auth'
 import { supabaseClient } from '../lib/supabase/client'
 import type { Workspace, WorkspaceImageMeta } from '../workspace/types'
 import {
+  getProjectSyncGeneration,
   retryProjectSync,
   startProjectSync,
   stopProjectSync,
@@ -74,6 +75,7 @@ export const useProjectSync = (
       workspace.kind !== 'project' ||
       workspace.id === null ||
       !user ||
+      workspace.ownerId !== user.id ||
       authStatus !== AuthStatus.Authenticated
     ) {
       return undefined
@@ -90,10 +92,19 @@ export const useProjectSync = (
 
     saveTimer.current = window.setTimeout(() => {
       void (async () => {
+        const generation = getProjectSyncGeneration(user.id)
+        if (generation === null) {
+          return
+        }
         try {
-          await syncWorkspace(user.id, workspace, (queued) => {
-            pendingSyncRef.current = queued
-          })
+          await syncWorkspace(
+            user.id,
+            workspace,
+            (queued) => {
+              pendingSyncRef.current = queued
+            },
+            generation,
+          )
         } catch {
           // The queued writes and unsynced revision are retained for a later retry.
         }
@@ -108,12 +119,21 @@ export const useProjectSync = (
   }, [authStatus, user, workspace])
 
   const saveNow = useCallback(async () => {
-    if (!user || workspace.kind !== 'project') {
+    if (!user || workspace.kind !== 'project' || workspace.ownerId !== user.id) {
       return
     }
-    await syncWorkspace(user.id, workspace, (queued) => {
-      pendingSyncRef.current = queued
-    })
+    const generation = getProjectSyncGeneration(user.id)
+    if (generation === null) {
+      throw new Error('Project sync is not active for the authenticated user.')
+    }
+    await syncWorkspace(
+      user.id,
+      workspace,
+      (queued) => {
+        pendingSyncRef.current = queued
+      },
+      generation,
+    )
   }, [user, workspace])
 
   return {

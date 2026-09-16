@@ -17,35 +17,39 @@ export const hydrateProjectWorkspace = async (
   }
 
   const frames: WorkspaceFrame[] = []
-  for (const row of loaded.frames) {
-    const key = blobKey(userId, projectId, row.id)
-    let blob = await getBlob(key)
+  try {
+    for (const row of loaded.frames) {
+      const key = blobKey(userId, projectId, row.id)
+      let blob = await getBlob(key)
 
-    if (!blob) {
-      try {
+      if (!blob) {
         blob = await downloadProjectImage(client, row.image_path)
         await putBlob(userId, key, blob)
-      } catch {
-        // Frame metadata can exist before the object finished uploading; skip it.
-        continue
       }
-    }
 
-    const file = new File([blob], `${row.id}.webp`, { type: 'image/webp' })
-    frames.push({
-      id: row.id,
-      order: row.frame_order,
-      settings: row.settings as unknown as WorkspaceFrame['settings'],
-      file,
-      url: URL.createObjectURL(file),
-      image: {
-        contentType: row.image_content_type,
-        byteSize: row.image_byte_size,
-        width: row.image_width ?? undefined,
-        height: row.image_height ?? undefined,
-        contentHash: row.image_content_hash ?? undefined,
-        storagePath: row.image_path,
-      },
+      const file = new File([blob], `${row.id}.webp`, { type: 'image/webp' })
+      frames.push({
+        id: row.id,
+        order: row.frame_order,
+        settings: row.settings as unknown as WorkspaceFrame['settings'],
+        file,
+        url: URL.createObjectURL(file),
+        image: {
+          contentType: row.image_content_type,
+          byteSize: row.image_byte_size,
+          width: row.image_width ?? undefined,
+          height: row.image_height ?? undefined,
+          contentHash: row.image_content_hash ?? undefined,
+          storagePath: row.image_path,
+        },
+      })
+    }
+  } catch (error) {
+    for (const frame of frames) {
+      URL.revokeObjectURL(frame.url)
+    }
+    throw new Error('Could not open project because one or more images failed to load.', {
+      cause: error,
     })
   }
 

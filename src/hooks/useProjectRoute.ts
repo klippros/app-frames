@@ -20,21 +20,18 @@ export const useProjectRoute = (
   const isHomeRoute = routeProjectId === undefined && !isSketchRoute
   const navigate = useNavigate()
   const { user, authStatus } = useAuth()
+  const authenticatedUserId = authStatus === AuthStatus.Authenticated ? (user?.id ?? null) : null
   const [routeError, setRouteError] = useState<string | null>(null)
   const [isOpening, setIsOpening] = useState(false)
-  const loadingIdRef = useRef<string | null>(null)
-  const previousRouteProjectId = useRef<string | undefined>(routeProjectId)
-  const previousIsSketchRoute = useRef(isSketchRoute)
+  const loadingKeyRef = useRef<string | null>(null)
+  const authIdentityRef = useRef<string | null>(authenticatedUserId)
+  authIdentityRef.current = authenticatedUserId
   const activeWorkspaceId = workspace.kind === 'project' ? workspace.id : null
+  const hasWorkspaceState =
+    workspace.kind === 'project' || workspace.frames.length > 0 || workspace.revision !== 0
 
   // URL is the source of truth: hydrate on project routes, clear when leaving editor routes.
   useEffect(() => {
-    const leftProjectRoute =
-      previousRouteProjectId.current !== undefined && routeProjectId === undefined
-    const leftSketchRoute = previousIsSketchRoute.current && !isSketchRoute
-    previousRouteProjectId.current = routeProjectId
-    previousIsSketchRoute.current = isSketchRoute
-
     if (rawProjectId !== undefined && routeProjectId === undefined) {
       setRouteError('Invalid project link.')
       void navigate('/', { replace: true })
@@ -42,18 +39,21 @@ export const useProjectRoute = (
     }
 
     if (isHomeRoute) {
-      if (leftProjectRoute || leftSketchRoute) {
+      if (hasWorkspaceState) {
         resetWorkspace()
       }
       setRouteError(null)
-      loadingIdRef.current = null
+      loadingKeyRef.current = null
       setIsOpening(false)
       return undefined
     }
 
     if (isSketchRoute) {
+      if (workspace.kind === 'project') {
+        resetWorkspace()
+      }
       setRouteError(null)
-      loadingIdRef.current = null
+      loadingKeyRef.current = null
       setIsOpening(false)
       return undefined
     }
@@ -64,36 +64,50 @@ export const useProjectRoute = (
 
     const projectId = routeProjectId
 
-    // Already showing this project (e.g. just created / saved).
-    if (activeWorkspaceId === projectId) {
-      setRouteError(null)
-      setIsOpening(false)
-      loadingIdRef.current = null
-      return undefined
-    }
-
     if (authStatus === AuthStatus.Loading) {
       return undefined
     }
 
-    if (authStatus !== AuthStatus.Authenticated || !user || !supabaseClient) {
+    if (authenticatedUserId === null || !supabaseClient) {
       setRouteError('Sign in to open this project.')
+      loadingKeyRef.current = null
+      setIsOpening(false)
       return undefined
     }
 
-    if (loadingIdRef.current === projectId) {
+    // Already showing this project for the current authenticated owner.
+    if (activeWorkspaceId === projectId && workspace.ownerId === authenticatedUserId) {
+      setRouteError(null)
+      setIsOpening(false)
+      loadingKeyRef.current = null
+      return undefined
+    }
+
+    if (workspace.kind === 'project') {
+      resetWorkspace()
+      return undefined
+    }
+
+    const loadingKey = `${authenticatedUserId}/${projectId}`
+    if (loadingKeyRef.current === loadingKey) {
       return undefined
     }
 
     let cancelled = false
-    loadingIdRef.current = projectId
+    loadingKeyRef.current = loadingKey
     setIsOpening(true)
     setRouteError(null)
 
     void (async () => {
+      let next: Workspace | null = null
       try {
-        const next = await hydrateProjectWorkspace(supabaseClient, user.id, projectId)
-        if (cancelled) {
+        next = await hydrateProjectWorkspace(supabaseClient, authenticatedUserId, projectId)
+        if (cancelled || authIdentityRef.current !== authenticatedUserId) {
+          if (next !== null) {
+            for (const frame of next.frames) {
+              URL.revokeObjectURL(frame.url)
+            }
+          }
           return
         }
         if (!next) {
@@ -109,8 +123,8 @@ export const useProjectRoute = (
         }
         setRouteError(error instanceof Error ? error.message : 'Could not open project.')
       } finally {
-        if (!cancelled && loadingIdRef.current === projectId) {
-          loadingIdRef.current = null
+        if (!cancelled && loadingKeyRef.current === loadingKey) {
+          loadingKeyRef.current = null
           setIsOpening(false)
         }
       }
@@ -118,18 +132,24 @@ export const useProjectRoute = (
 
     return () => {
       cancelled = true
+      if (loadingKeyRef.current === loadingKey) {
+        loadingKeyRef.current = null
+      }
     }
   }, [
     activeWorkspaceId,
+    authenticatedUserId,
     authStatus,
     isHomeRoute,
     isSketchRoute,
+    hasWorkspaceState,
     loadWorkspace,
     navigate,
     rawProjectId,
     resetWorkspace,
     routeProjectId,
-    user,
+    workspace.kind,
+    workspace.ownerId,
   ])
 
   const openProject = useCallback(

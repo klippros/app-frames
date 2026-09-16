@@ -37,18 +37,27 @@ let flushChain: Promise<void> = Promise.resolve()
 let activeUserId: string | null = null
 let activeClient: SupabaseClient | null = null
 let statusListener: StatusListener | null = null
+let syncGeneration = 0
 const knownServerRevisions = new Map<string, number>()
 
 const setStatus = (status: SyncStatus, message?: string) => {
   statusListener?.(status, message)
 }
 
-const reportSyncFailure = (error: unknown) => {
+const isCurrentSession = (
+  client: SupabaseClient | null,
+  userId: string,
+  generation: number,
+): boolean => activeClient === client && activeUserId === userId && syncGeneration === generation
+
+const reportSyncFailure = (error: unknown, generation?: number) => {
   const syncError = toProjectSyncError(error)
-  setStatus(
-    syncError.kind === SyncFailureKind.Conflict ? SyncStatus.Conflict : SyncStatus.Error,
-    syncError.message,
-  )
+  if (generation === undefined || generation === syncGeneration) {
+    setStatus(
+      syncError.kind === SyncFailureKind.Conflict ? SyncStatus.Conflict : SyncStatus.Error,
+      syncError.message,
+    )
+  }
   return syncError
 }
 
@@ -57,6 +66,7 @@ export const startProjectSync = (
   userId: string,
   onStatus?: StatusListener,
 ) => {
+  syncGeneration += 1
   ensureUploadedPathsUser(userId)
   activeClient = client
   activeUserId = userId
@@ -65,11 +75,21 @@ export const startProjectSync = (
 }
 
 export const stopProjectSync = () => {
+  syncGeneration += 1
   activeClient = null
   activeUserId = null
   statusListener = null
   clearUploadedImagePaths()
   knownServerRevisions.clear()
+}
+
+export const getProjectSyncGeneration = (userId: string): number | null =>
+  activeUserId === userId && activeClient !== null ? syncGeneration : null
+
+const assertCurrentGeneration = (userId: string, generation?: number) => {
+  if (generation !== undefined && getProjectSyncGeneration(userId) !== generation) {
+    throw new Error('The authenticated session changed before the project could be saved.')
+  }
 }
 
 const blobKey = (userId: string, projectId: string, frameId: string, contentHash: string) =>
@@ -78,9 +98,14 @@ const blobKey = (userId: string, projectId: string, frameId: string, contentHash
 export const queueWorkspaceSave = async (
   userId: string,
   workspace: Workspace,
+  generation?: number,
 ): Promise<Record<string, WorkspaceImageMeta>> => {
+  assertCurrentGeneration(userId, generation)
   if (workspace.kind !== 'project' || workspace.id === null || workspace.name === null) {
     return {}
+  }
+  if (workspace.ownerId !== userId) {
+    throw new Error('The project does not belong to the authenticated user.')
   }
 
   const projectId = workspace.id
@@ -89,11 +114,12 @@ export const queueWorkspaceSave = async (
   const frames: QueuedSnapshotFrame[] = []
 
   for (const frame of workspace.frames) {
-    const queued = await prepareFrameSnapshot(userId, projectId, frame)
+    const queued = await prepareFrameSnapshot(userId, projectId, frame, generation)
     frameImages[frame.id] = queued.image
     frames.push(queued.payload)
   }
 
+  assertCurrentGeneration(userId, generation)
   const pending = (await listQueueForUser(userId)).filter(
     (item): item is QueuedProjectSnapshotWrite =>
       item.projectId === projectId && item.kind === 'save-project-snapshot',
@@ -103,6 +129,7 @@ export const queueWorkspaceSave = async (
     knownServerRevisions.get(`${userId}/${projectId}`) ??
     workspace.syncedRevision
 
+  assertCurrentGeneration(userId, generation)
   await enqueueWrite({
     id: crypto.randomUUID(),
     userId,
@@ -131,14 +158,16 @@ export const syncWorkspace = async (
   userId: string,
   workspace: Workspace,
   onQueued?: (queued: SyncedWorkspaceRevision) => void,
+  generation?: number,
 ): Promise<SyncedWorkspaceRevision> => {
   let frameImages: Record<string, WorkspaceImageMeta>
   try {
-    frameImages = await queueWorkspaceSave(userId, workspace)
+    frameImages = await queueWorkspaceSave(userId, workspace, generation)
   } catch (error) {
-    throw reportSyncFailure(error)
+    throw reportSyncFailure(error, generation)
   }
 
+  assertCurrentGeneration(userId, generation)
   const queued = { revision: workspace.revision, frameImages }
   onQueued?.(queued)
   await flushProjectSync()
@@ -149,13 +178,16 @@ const prepareFrameSnapshot = async (
   userId: string,
   projectId: string,
   frame: WorkspaceFrame,
+  generation?: number,
 ): Promise<{
   image: WorkspaceImageMeta
   payload: QueuedSnapshotFrame
 }> => {
   const contentHash = frame.image?.contentHash ?? (await hashBlob(frame.file))
+  assertCurrentGeneration(userId, generation)
   const key = blobKey(userId, projectId, frame.id, contentHash)
   await putBlob(userId, key, frame.file)
+  assertCurrentGeneration(userId, generation)
   const imagePath =
     frame.image?.storagePath ?? buildProjectImagePath(userId, projectId, frame.id, contentHash)
 
@@ -207,33 +239,54 @@ export const queueProjectDelete = async (userId: string, projectId: string): Pro
 }
 
 export const flushProjectSync = (): Promise<void> => {
+  const client = activeClient
+  const userId = activeUserId
+  const generation = syncGeneration
+  const listener = statusListener
+
   const flush = flushChain.then(async () => {
-    const client = activeClient
-    const userId = activeUserId
     if (client === null || userId === null) {
+      return
+    }
+    if (!isCurrentSession(client, userId, generation)) {
       return
     }
 
     const items = await listQueueForUser(userId)
+    if (!isCurrentSession(client, userId, generation)) {
+      return
+    }
     if (items.length === 0) {
-      setStatus(SyncStatus.Synced)
+      listener?.(SyncStatus.Synced)
       return
     }
 
-    setStatus(SyncStatus.Syncing)
+    listener?.(SyncStatus.Syncing)
     try {
       for (const item of items) {
+        if (!isCurrentSession(client, userId, generation)) {
+          return
+        }
         await processQueuedWrite(client, item)
+        if (!isCurrentSession(client, userId, generation)) {
+          return
+        }
         if (item.kind === 'save-project-snapshot') {
           knownServerRevisions.set(`${item.userId}/${item.projectId}`, item.payload.revision)
         }
         await dequeueWrite(item.id)
       }
-      if ((await listQueueForUser(userId)).length === 0) {
-        setStatus(SyncStatus.Synced)
+      if (
+        isCurrentSession(client, userId, generation) &&
+        (await listQueueForUser(userId)).length === 0
+      ) {
+        listener?.(SyncStatus.Synced)
       }
     } catch (error) {
-      throw reportSyncFailure(error)
+      if (!isCurrentSession(client, userId, generation)) {
+        return
+      }
+      throw reportSyncFailure(error, generation)
     }
   })
 
