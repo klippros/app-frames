@@ -1,14 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+/* oxlint-disable max-lines -- Sync queue mocks are intentionally shared across regression cases. */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEmptySketch, type Workspace } from '../../workspace/types'
 import { buildProjectImagePath } from '../supabase/schema'
 import * as gateway from './projectGateway'
 import {
   flushProjectSync,
+  ProjectSyncError,
   queueProjectDelete,
   queueWorkspaceSave,
   startProjectSync,
   stopProjectSync,
+  SyncFailureKind,
   SyncStatus,
+  syncWorkspace,
 } from './projectSync'
 
 vi.mock('./contentHash', () => ({
@@ -64,6 +68,7 @@ vi.mock('./idb', () => {
     }),
     __queue: queue,
     __blobs: blobs,
+    getTestQueue: () => queue,
     clearTestState: () => {
       queue.length = 0
       blobs.clear()
@@ -80,6 +85,13 @@ const waitForFlush = () =>
   new Promise((resolve) => {
     setTimeout(resolve, 20)
   })
+
+const startAndSettleInitialFlush = async (
+  onStatus?: (status: SyncStatus, message?: string) => void,
+) => {
+  startProjectSync({} as never, USER_ID, onStatus)
+  await waitForFlush()
+}
 
 const createProjectWorkspace = (frameImage?: Workspace['frames'][number]['image']): Workspace => {
   const file = new File([new Uint8Array([1, 2, 3])], 'frame.webp', { type: 'image/webp' })
@@ -104,9 +116,14 @@ const createProjectWorkspace = (frameImage?: Workspace['frames'][number]['image'
 }
 
 describe('projectSync', () => {
+  beforeEach(() => {
+    vi.stubGlobal('navigator', { onLine: true })
+  })
+
   afterEach(async () => {
     stopProjectSync()
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
     const idb = await import('./idb')
     ;(idb as unknown as { clearTestState: () => void }).clearTestState()
   })
@@ -170,6 +187,97 @@ describe('projectSync', () => {
     expect(gateway.upsertFrame).toHaveBeenCalled()
     expect(idb.dequeueWrite).toHaveBeenCalled()
     expect(statuses).toContain(SyncStatus.Synced)
+  })
+
+  it('rejects a failed initial save, keeps it queued, and recovers on retry', async () => {
+    const idb = await import('./idb')
+    const statuses: Array<{ status: SyncStatus; message?: string }> = []
+    await startAndSettleInitialFlush((status, message) => {
+      statuses.push({ status, message })
+    })
+    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new Error('database unavailable'))
+    const onQueued = vi.fn()
+
+    await expect(
+      syncWorkspace(USER_ID, createProjectWorkspace(), [], (queued) => {
+        onQueued(queued)
+      }),
+    ).rejects.toMatchObject({
+      kind: SyncFailureKind.Error,
+      message: 'database unavailable',
+    })
+
+    const queue = (idb as unknown as { getTestQueue: () => Array<{ kind: string }> }).getTestQueue()
+    expect(onQueued).toHaveBeenCalledWith(expect.objectContaining({ revision: 2 }))
+    expect(queue.map((item) => item.kind)).toEqual(['upsert-project', 'upsert-frame'])
+    expect(statuses.at(-1)).toEqual({
+      status: SyncStatus.Error,
+      message: 'database unavailable',
+    })
+
+    await expect(flushProjectSync()).resolves.toBeUndefined()
+    expect(queue).toHaveLength(0)
+    expect(statuses.at(-1)?.status).toBe(SyncStatus.Synced)
+  })
+
+  it('keeps frame metadata queued after a partial upload failure and retries safely', async () => {
+    const idb = await import('./idb')
+    await startAndSettleInitialFlush()
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
+    vi.mocked(gateway.upsertFrame).mockRejectedValueOnce(new Error('metadata write failed'))
+
+    await expect(flushProjectSync()).rejects.toBeInstanceOf(ProjectSyncError)
+
+    const queue = (idb as unknown as { getTestQueue: () => Array<{ kind: string }> }).getTestQueue()
+    expect(queue.map((item) => item.kind)).toEqual(['upsert-frame'])
+    expect(gateway.deleteProjectImage).toHaveBeenCalledWith(expect.anything(), IMAGE_PATH)
+
+    await expect(flushProjectSync()).resolves.toBeUndefined()
+    expect(queue).toHaveLength(0)
+    expect(gateway.uploadProjectImage).toHaveBeenCalledTimes(2)
+    expect(gateway.upsertFrame).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports conflicts without preventing a later serialized flush', async () => {
+    await startAndSettleInitialFlush()
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
+    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new Error('revision conflict'))
+
+    await expect(flushProjectSync()).rejects.toMatchObject({
+      kind: SyncFailureKind.Conflict,
+    })
+    await expect(flushProjectSync()).resolves.toBeUndefined()
+  })
+
+  it('classifies timeout failures while retaining the queued write', async () => {
+    const idb = await import('./idb')
+    await startAndSettleInitialFlush()
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
+    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new Error('request timed out'))
+
+    await expect(flushProjectSync()).rejects.toMatchObject({
+      kind: SyncFailureKind.Timeout,
+      message: 'Sync timed out — changes remain queued.',
+    })
+
+    const queue = (idb as unknown as { getTestQueue: () => unknown[] }).getTestQueue()
+    expect(queue).toHaveLength(2)
+  })
+
+  it('classifies offline failures while retaining the queued write', async () => {
+    const idb = await import('./idb')
+    await startAndSettleInitialFlush()
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
+    vi.stubGlobal('navigator', { onLine: false })
+    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    await expect(flushProjectSync()).rejects.toMatchObject({
+      kind: SyncFailureKind.Offline,
+      message: 'Offline — changes remain saved on this device.',
+    })
+
+    const queue = (idb as unknown as { getTestQueue: () => unknown[] }).getTestQueue()
+    expect(queue).toHaveLength(2)
   })
 
   it('skips image upload when the frame is already stored at the content-hash path', async () => {
@@ -242,5 +350,23 @@ describe('projectSync', () => {
 
     expect(gateway.deleteProject).toHaveBeenCalledWith(expect.anything(), PROJECT_ID)
     expect(gateway.deleteProjectImages).toHaveBeenCalledWith(expect.anything(), USER_ID, PROJECT_ID)
+  })
+
+  it('keeps a failed project delete queued until an idempotent retry succeeds', async () => {
+    const idb = await import('./idb')
+    await startAndSettleInitialFlush()
+    await queueProjectDelete(USER_ID, PROJECT_ID)
+    vi.mocked(gateway.deleteProject).mockRejectedValueOnce(new Error('delete failed'))
+
+    await expect(flushProjectSync()).rejects.toMatchObject({
+      kind: SyncFailureKind.Error,
+    })
+
+    const queue = (idb as unknown as { getTestQueue: () => Array<{ kind: string }> }).getTestQueue()
+    expect(queue.map((item) => item.kind)).toEqual(['delete-project'])
+
+    await expect(flushProjectSync()).resolves.toBeUndefined()
+    expect(queue).toHaveLength(0)
+    expect(gateway.deleteProject).toHaveBeenCalledTimes(2)
   })
 })

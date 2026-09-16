@@ -210,6 +210,9 @@ describe('workspaceReducer', () => {
 
     expect(synced.revision).toBe(project.revision)
     expect(synced.syncedRevision).toBe(project.revision)
+    expect(workspaceReducer(synced, { type: 'MARK_SYNCED', revision: 0 }).syncedRevision).toBe(
+      project.revision,
+    )
   })
 
   it('stamps synced image paths without bumping revision', () => {

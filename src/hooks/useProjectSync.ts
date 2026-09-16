@@ -3,13 +3,13 @@ import { AuthStatus } from '../types/auth'
 import { supabaseClient } from '../lib/supabase/client'
 import type { Workspace, WorkspaceImageMeta } from '../workspace/types'
 import {
-  flushProjectSync,
-  queueWorkspaceSave,
   retryProjectSync,
   startProjectSync,
   stopProjectSync,
+  syncWorkspace,
   SyncStatus,
 } from '../lib/sync/projectSync'
+import type { SyncedWorkspaceRevision } from '../lib/sync/projectSync'
 import { useAuth } from './authContext'
 
 const AUTOSAVE_MS = 800
@@ -33,15 +33,16 @@ export const useProjectSync = (
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle)
   const [syncMessage, setSyncMessage] = useState<string | undefined>()
   const saveTimer = useRef<number | null>(null)
-  const lastQueuedRevision = useRef<number | null>(null)
-  const lastQueuedFrameImages = useRef<Record<string, WorkspaceImageMeta>>({})
   const knownFramesRef = useRef<KnownFrame[]>([])
-  const pendingFramesRef = useRef<KnownFrame[] | null>(null)
+  const pendingSyncRef = useRef<(SyncedWorkspaceRevision & { knownFrames: KnownFrame[] }) | null>(
+    null,
+  )
   const knownProjectIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!isConfigured || authStatus !== AuthStatus.Authenticated || !user || !supabaseClient) {
       stopProjectSync()
+      pendingSyncRef.current = null
       setSyncStatus(SyncStatus.Idle)
       return undefined
     }
@@ -49,21 +50,27 @@ export const useProjectSync = (
     startProjectSync(supabaseClient, user.id, (status, message) => {
       setSyncStatus(status)
       setSyncMessage(message)
-      if (status === SyncStatus.Synced && lastQueuedRevision.current !== null) {
-        if (pendingFramesRef.current !== null) {
-          knownFramesRef.current = pendingFramesRef.current
-          pendingFramesRef.current = null
-        }
-        onSynced?.(lastQueuedRevision.current, lastQueuedFrameImages.current)
+      if (status === SyncStatus.Synced && pendingSyncRef.current !== null) {
+        const pending = pendingSyncRef.current
+        pendingSyncRef.current = null
+        knownFramesRef.current = pending.knownFrames
+        onSynced?.(pending.revision, pending.frameImages)
       }
     })
 
+    const retry = async () => {
+      try {
+        await retryProjectSync()
+      } catch {
+        // Status and queued writes are retained for another retry.
+      }
+    }
     const onOnline = () => {
-      void retryProjectSync()
+      void retry()
     }
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        void retryProjectSync()
+        void retry()
       }
     }
 
@@ -74,6 +81,7 @@ export const useProjectSync = (
       window.removeEventListener('online', onOnline)
       document.removeEventListener('visibilitychange', onVisible)
       stopProjectSync()
+      pendingSyncRef.current = null
     }
   }, [authStatus, isConfigured, onSynced, user])
 
@@ -88,6 +96,7 @@ export const useProjectSync = (
     if (workspace.id !== knownProjectIdRef.current) {
       knownProjectIdRef.current = workspace.id
       knownFramesRef.current = framesSnapshot(workspace)
+      pendingSyncRef.current = null
       return
     }
 
@@ -121,10 +130,13 @@ export const useProjectSync = (
         const deletedFrames = knownFramesRef.current.filter((frame) => !currentIds.has(frame.id))
         const nextKnown = framesSnapshot(workspace)
 
-        lastQueuedRevision.current = workspace.revision
-        pendingFramesRef.current = nextKnown
-        lastQueuedFrameImages.current = await queueWorkspaceSave(user.id, workspace, deletedFrames)
-        await flushProjectSync()
+        try {
+          await syncWorkspace(user.id, workspace, deletedFrames, (queued) => {
+            pendingSyncRef.current = { ...queued, knownFrames: nextKnown }
+          })
+        } catch {
+          // The queued writes and unsynced revision are retained for a later retry.
+        }
       })()
     }, AUTOSAVE_MS)
 
@@ -143,11 +155,9 @@ export const useProjectSync = (
     const deletedFrames = knownFramesRef.current.filter((frame) => !currentIds.has(frame.id))
     const nextKnown = framesSnapshot(workspace)
 
-    lastQueuedRevision.current = workspace.revision
-    pendingFramesRef.current = nextKnown
-    lastQueuedFrameImages.current = await queueWorkspaceSave(user.id, workspace, deletedFrames)
-    await flushProjectSync()
-    // MARK_SYNCED / known-frame advance is driven by SyncStatus.Synced.
+    await syncWorkspace(user.id, workspace, deletedFrames, (queued) => {
+      pendingSyncRef.current = { ...queued, knownFrames: nextKnown }
+    })
   }, [user, workspace])
 
   return {

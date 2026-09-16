@@ -163,9 +163,13 @@ export const workspaceReducer = (state: Workspace, action: WorkspaceAction): Wor
       }
     case 'MARK_SYNCED': {
       const { frameImages } = action
+      const syncedRevision = Math.min(
+        state.revision,
+        Math.max(state.syncedRevision ?? 0, action.revision),
+      )
       return {
         ...state,
-        syncedRevision: action.revision,
+        syncedRevision,
         frames:
           frameImages === undefined
             ? state.frames

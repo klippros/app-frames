@@ -8,7 +8,7 @@ import {
   PROJECT_LIMIT_MESSAGE,
   countProjects,
 } from '../lib/sync/projectGateway'
-import { flushProjectSync, queueWorkspaceSave, stopProjectSync } from '../lib/sync/projectSync'
+import { stopProjectSync, syncWorkspace } from '../lib/sync/projectSync'
 import { supabaseClient } from '../lib/supabase/client'
 import { MAX_FRAMES_PER_PROJECT, MAX_PROJECTS_PER_USER } from '../lib/supabase/schema'
 import { createEmptySketch } from '../workspace/types'
@@ -139,6 +139,13 @@ export const useWorkspace = () => {
     dispatch({ type: 'SET_PROJECT_META', id, name, ownerId })
   }, [])
 
+  const markSynced = useCallback(
+    (revision: number, frameImages?: Record<string, WorkspaceImageMeta>) => {
+      dispatch({ type: 'MARK_SYNCED', revision, frameImages })
+    },
+    [],
+  )
+
   const promoteToProject = useCallback(
     async (name: string, ownerId: string, initialScreenshots?: Screenshot[]) => {
       if (!supabaseClient) {
@@ -180,19 +187,11 @@ export const useWorkspace = () => {
       }
       next = workspaceReducer(next, metaAction)
       dispatch(metaAction)
-      const frameImages = await queueWorkspaceSave(ownerId, next)
-      await flushProjectSync()
-      dispatch({ type: 'MARK_SYNCED', revision: next.revision, frameImages })
+      const synced = await syncWorkspace(ownerId, next)
+      markSynced(synced.revision, synced.frameImages)
       return projectId
     },
-    [workspace],
-  )
-
-  const markSynced = useCallback(
-    (revision: number, frameImages?: Record<string, WorkspaceImageMeta>) => {
-      dispatch({ type: 'MARK_SYNCED', revision, frameImages })
-    },
-    [],
+    [markSynced, workspace],
   )
 
   const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace, markSynced)

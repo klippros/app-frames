@@ -3,28 +3,42 @@ import { flushProjectSync, stopProjectSync } from './projectSync'
 
 const FLUSH_TIMEOUT_MS = 4000
 
-const withTimeout = async (promise: Promise<unknown>, ms: number): Promise<void> => {
-  let timeoutId = 0
+export const SignOutFlushOutcome = {
+  Succeeded: 'succeeded',
+  Failed: 'failed',
+  TimedOut: 'timed-out',
+} as const
+
+export type SignOutFlushOutcome = (typeof SignOutFlushOutcome)[keyof typeof SignOutFlushOutcome]
+
+const waitForFlush = async (
+  promise: Promise<unknown>,
+  ms: number,
+): Promise<SignOutFlushOutcome> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
   try {
-    await Promise.race([
-      promise,
-      new Promise<void>((resolve) => {
-        timeoutId = window.setTimeout(() => {
-          resolve()
+    return await Promise.race([
+      promise.then(
+        () => SignOutFlushOutcome.Succeeded,
+        () => SignOutFlushOutcome.Failed,
+      ),
+      new Promise<SignOutFlushOutcome>((resolve) => {
+        timeoutId = globalThis.setTimeout(() => {
+          resolve(SignOutFlushOutcome.TimedOut)
         }, ms)
       }),
     ])
   } finally {
-    window.clearTimeout(timeoutId)
+    if (timeoutId !== undefined) {
+      globalThis.clearTimeout(timeoutId)
+    }
   }
 }
 
-export const performSignOutCleanup = async (userId: string | null): Promise<void> => {
-  try {
-    await withTimeout(flushProjectSync(), FLUSH_TIMEOUT_MS)
-  } catch {
-    // Local cleanup still proceeds when the final flush fails.
-  }
+export const performSignOutCleanup = async (
+  userId: string | null,
+): Promise<SignOutFlushOutcome> => {
+  const flushOutcome = await waitForFlush(flushProjectSync(), FLUSH_TIMEOUT_MS)
 
   stopProjectSync()
 
@@ -41,4 +55,6 @@ export const performSignOutCleanup = async (userId: string | null): Promise<void
       // Best-effort cleanup.
     }
   }
+
+  return flushOutcome
 }

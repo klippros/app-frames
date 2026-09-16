@@ -17,6 +17,9 @@ import {
   hasUploadedPath,
   processQueuedWrite,
 } from './processQueuedWrite'
+import { SyncFailureKind, toProjectSyncError } from './syncErrors'
+
+export { ProjectSyncError, SyncFailureKind } from './syncErrors'
 
 export const SyncStatus = {
   Idle: 'idle',
@@ -39,6 +42,15 @@ const setStatus = (status: SyncStatus, message?: string) => {
   statusListener?.(status, message)
 }
 
+const reportSyncFailure = (error: unknown) => {
+  const syncError = toProjectSyncError(error)
+  setStatus(
+    syncError.kind === SyncFailureKind.Conflict ? SyncStatus.Conflict : SyncStatus.Error,
+    syncError.message,
+  )
+  return syncError
+}
+
 export const startProjectSync = (
   client: SupabaseClient,
   userId: string,
@@ -48,7 +60,7 @@ export const startProjectSync = (
   activeClient = client
   activeUserId = userId
   statusListener = onStatus ?? null
-  void flushProjectSync()
+  void flushProjectSync().catch(() => undefined)
 }
 
 export const stopProjectSync = () => {
@@ -98,6 +110,30 @@ export const queueWorkspaceSave = async (
   }
 
   return frameImages
+}
+
+export interface SyncedWorkspaceRevision {
+  revision: number
+  frameImages: Record<string, WorkspaceImageMeta>
+}
+
+export const syncWorkspace = async (
+  userId: string,
+  workspace: Workspace,
+  deletedFrames: readonly { id: string; imagePath?: string }[] = [],
+  onQueued?: (queued: SyncedWorkspaceRevision) => void,
+): Promise<SyncedWorkspaceRevision> => {
+  let frameImages: Record<string, WorkspaceImageMeta>
+  try {
+    frameImages = await queueWorkspaceSave(userId, workspace, deletedFrames)
+  } catch (error) {
+    throw reportSyncFailure(error)
+  }
+
+  const queued = { revision: workspace.revision, frameImages }
+  onQueued?.(queued)
+  await flushProjectSync()
+  return queued
 }
 
 export const queueFrameSave = async (
@@ -196,7 +232,7 @@ export const queueProjectDelete = async (userId: string, projectId: string): Pro
 }
 
 export const flushProjectSync = (): Promise<void> => {
-  flushChain = flushChain.then(async () => {
+  const flush = flushChain.then(async () => {
     const client = activeClient
     const userId = activeUserId
     if (client === null || userId === null) {
@@ -217,17 +253,12 @@ export const flushProjectSync = (): Promise<void> => {
       }
       setStatus(SyncStatus.Synced)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sync failed'
-      if (message.toLowerCase().includes('conflict')) {
-        setStatus(SyncStatus.Conflict, message)
-      } else {
-        setStatus(SyncStatus.Error, message)
-      }
-      throw error
+      throw reportSyncFailure(error)
     }
   })
 
-  return flushChain.catch(() => undefined)
+  flushChain = flush.catch(() => undefined)
+  return flush
 }
 
 export const retryProjectSync = (): Promise<void> => flushProjectSync()
