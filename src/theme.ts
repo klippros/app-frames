@@ -1,11 +1,12 @@
 import { createSystem, defaultConfig, defineConfig, defineRecipe } from '@chakra-ui/react'
 
+const hoverMotion = { transform: 'scale(1.03)' }
+const activeMotion = { transform: 'scale(0.98)' }
+
 const scaleMotion = {
   transform: 'scale(1)',
   transitionProperty: 'transform, background-color, border-color',
   transitionDuration: '0.15s',
-  _hover: { transform: 'scale(1.03)' },
-  _active: { transform: 'scale(0.98)' },
 }
 
 const buttonRecipe = defineRecipe({
@@ -18,12 +19,12 @@ const buttonRecipe = defineRecipe({
         borderWidth: '1px',
         borderColor: 'whiteAlpha.600',
         _hover: {
-          ...scaleMotion._hover,
+          ...hoverMotion,
           bg: 'whiteAlpha.100',
           borderColor: 'whiteAlpha.800',
         },
         _active: {
-          ...scaleMotion._active,
+          ...activeMotion,
           bg: 'whiteAlpha.150',
         },
       },
@@ -33,11 +34,11 @@ const buttonRecipe = defineRecipe({
         color: 'black',
         borderColor: 'transparent',
         _hover: {
-          ...scaleMotion._hover,
+          ...hoverMotion,
           bg: 'whiteAlpha.900',
         },
         _active: {
-          ...scaleMotion._active,
+          ...activeMotion,
           bg: 'whiteAlpha.800',
         },
       },
@@ -49,12 +50,12 @@ const buttonRecipe = defineRecipe({
         borderWidth: '1px',
         borderColor: 'whiteAlpha.600',
         _hover: {
-          ...scaleMotion._hover,
+          ...hoverMotion,
           bg: 'transparent',
           borderColor: 'whiteAlpha.800',
         },
         _active: {
-          ...scaleMotion._active,
+          ...activeMotion,
           bg: 'transparent',
         },
       },
@@ -64,7 +65,7 @@ const buttonRecipe = defineRecipe({
         color: 'white',
         borderColor: 'transparent',
         _hover: {
-          ...scaleMotion._hover,
+          ...hoverMotion,
           bg: 'red.600',
         },
       },

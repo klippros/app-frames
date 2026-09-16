@@ -15,6 +15,11 @@ export interface GradientHueSelectorProps {
   onChange: (baseColor: string) => void
 }
 
+type HueSliderStyle = CSSProperties & {
+  '--thumb-color': string
+  '--track-gradient': string
+}
+
 const HUE_GRADIENT =
   'linear-gradient(to right, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(359 100% 50%))'
 
@@ -37,12 +42,12 @@ export const GradientHueSelector = ({
 
   useEffect(() => {
     if (!mobileOpen) {
-      return
+      return undefined
     }
 
     const handlePointerDown = (event: PointerEvent) => {
       const root = rootRef.current
-      if (root !== null && !root.contains(event.target as Node)) {
+      if (root !== null && event.target instanceof Node && !root.contains(event.target)) {
         setMobileOpen(false)
       }
     }
@@ -56,6 +61,19 @@ export const GradientHueSelector = ({
   const handleHueChange = (nextHue: number) => {
     setHue(nextHue)
     onChange(colorWithHue(nextHue))
+  }
+
+  const hueSliderStyle: HueSliderStyle = {
+    width: '100%',
+    height: '18px',
+    margin: 0,
+    padding: 0,
+    cursor: 'pointer',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    background: 'transparent',
+    '--thumb-color': baseColor,
+    '--track-gradient': HUE_GRADIENT,
   }
 
   const commitHexInput = (value: string) => {
@@ -140,20 +158,7 @@ export const GradientHueSelector = ({
               handleHueChange(Number(event.currentTarget.value))
             }}
             aria-label="Gradient hue"
-            style={
-              {
-                width: '100%',
-                height: '18px',
-                margin: 0,
-                padding: 0,
-                cursor: 'pointer',
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                background: 'transparent',
-                '--thumb-color': baseColor,
-                '--track-gradient': HUE_GRADIENT,
-              } as CSSProperties
-            }
+            style={hueSliderStyle}
             className="gradient-hue-slider"
           />
         </Flex>

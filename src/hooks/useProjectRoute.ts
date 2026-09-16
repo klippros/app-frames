@@ -58,8 +58,14 @@ export const useProjectRoute = (
       return undefined
     }
 
+    if (routeProjectId === undefined) {
+      return undefined
+    }
+
+    const projectId = routeProjectId
+
     // Already showing this project (e.g. just created / saved).
-    if (activeWorkspaceId === routeProjectId) {
+    if (activeWorkspaceId === projectId) {
       setRouteError(null)
       setIsOpening(false)
       loadingIdRef.current = null
@@ -75,18 +81,18 @@ export const useProjectRoute = (
       return undefined
     }
 
-    if (loadingIdRef.current === routeProjectId) {
+    if (loadingIdRef.current === projectId) {
       return undefined
     }
 
     let cancelled = false
-    loadingIdRef.current = routeProjectId
+    loadingIdRef.current = projectId
     setIsOpening(true)
     setRouteError(null)
 
     void (async () => {
       try {
-        const next = await hydrateProjectWorkspace(supabaseClient, user.id, routeProjectId)
+        const next = await hydrateProjectWorkspace(supabaseClient, user.id, projectId)
         if (cancelled) {
           return
         }
@@ -103,7 +109,7 @@ export const useProjectRoute = (
         }
         setRouteError(error instanceof Error ? error.message : 'Could not open project.')
       } finally {
-        if (!cancelled && loadingIdRef.current === routeProjectId) {
+        if (!cancelled && loadingIdRef.current === projectId) {
           loadingIdRef.current = null
           setIsOpening(false)
         }

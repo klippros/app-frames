@@ -4,8 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { previewFrameMaxWidth, toolbarControlSize } from '../../layout'
 import type { ExportFormat, TitlePosition } from '../../types'
-import type { GradientConfig } from '../../utils/featureGraphicConfig'
 import { DeleteFrameDialog } from '../DeleteFrameDialog/DeleteFrameDialog'
+import type { FrameCanvasProps } from '../FrameCanvas'
 import { FrameCanvas } from '../FrameCanvas'
 import { ToolbarIconButton } from '../ToolbarIconButton'
 import { FrameTitleOverlay } from './FrameTitleOverlay'
@@ -16,7 +16,7 @@ export interface ScreenshotFrameProps {
   screenshotUrl: string
   fileName: string
   format: ExportFormat
-  gradientConfig: GradientConfig
+  gradientConfig: FrameCanvasProps['gradientConfig']
   showBezel: boolean
   title: string
   titlePosition: TitlePosition
@@ -129,7 +129,6 @@ export const ScreenshotFrame = ({
           h="full"
           overflow="hidden"
           position="relative"
-          role="group"
           onClick={handlePreviewClick}
           onMouseEnter={() => {
             setIsHovered(true)

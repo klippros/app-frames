@@ -1,4 +1,5 @@
 import { Box } from '@chakra-ui/react'
+import type { CSSProperties } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ExportFormat, TitlePosition } from '../../types'
 import {
@@ -86,15 +87,15 @@ export const FrameTitleOverlay = ({
     }
   }, [isEditing])
 
-  const sharedTextStyle = {
+  const sharedTextStyle: CSSProperties = {
     color: TITLE_COLOR,
     fontFamily: TITLE_FONT_FAMILY,
     fontSize: `${scaledFontSize}px`,
     lineHeight: `${scaledLineHeight}px`,
-    textAlign: 'center' as const,
+    textAlign: 'center',
     width: '100%',
-    whiteSpace: 'pre' as const,
-    overflow: 'hidden' as const,
+    whiteSpace: 'pre',
+    overflow: 'hidden',
     transform: hoverFontScale === 1 ? undefined : `scale(${hoverFontScale})`,
     transition: 'transform 150ms ease',
   }
@@ -174,7 +175,7 @@ export const FrameTitleOverlay = ({
           }}
         />
       ) : (
-        <Box aria-hidden px={`${horizontalPadding}px`} {...sharedTextStyle}>
+        <Box aria-hidden px={`${horizontalPadding}px`} style={sharedTextStyle}>
           {displayText}
         </Box>
       )}

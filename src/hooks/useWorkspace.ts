@@ -30,7 +30,7 @@ export const useWorkspace = () => {
   framesRef.current = workspace.frames
 
   // Only revoke leftover blob URLs on unmount. Tying this effect to `frames`
-  // also revoked still-used URLs whenever MARK_SYNCED replaced the array.
+  // Also revoked still-used URLs whenever MARK_SYNCED replaced the array.
   useEffect(
     () => () => {
       for (const frame of framesRef.current) {
