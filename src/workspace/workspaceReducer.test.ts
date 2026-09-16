@@ -200,19 +200,30 @@ describe('workspaceReducer', () => {
   })
 
   it('marks a revision as synced without bumping it', () => {
+    const projectId = '11111111-1111-1111-1111-111111111111'
     const project = workspaceReducer(createEmptySketch(), {
       type: 'SET_PROJECT_META',
-      id: '11111111-1111-1111-1111-111111111111',
+      id: projectId,
       name: 'My App',
       ownerId: 'user-1',
     })
-    const synced = workspaceReducer(project, { type: 'MARK_SYNCED', revision: project.revision })
+    const synced = workspaceReducer(project, {
+      type: 'MARK_SYNCED',
+      projectId,
+      revision: project.revision,
+    })
 
     expect(synced.revision).toBe(project.revision)
     expect(synced.syncedRevision).toBe(project.revision)
-    expect(workspaceReducer(synced, { type: 'MARK_SYNCED', revision: 0 }).syncedRevision).toBe(
-      project.revision,
-    )
+    expect(
+      workspaceReducer(synced, {
+        type: 'MARK_SYNCED',
+        projectId,
+        revision: 0,
+      }).syncedRevision,
+    ).toBe(project.revision)
+    const otherProject = { type: 'MARK_SYNCED', projectId: 'other-project', revision: 1 } as const
+    expect(workspaceReducer(synced, otherProject)).toBe(synced)
   })
 
   it('stamps synced image paths without bumping revision', () => {
@@ -229,6 +240,7 @@ describe('workspaceReducer', () => {
 
     const synced = workspaceReducer(project, {
       type: 'MARK_SYNCED',
+      projectId: project.id,
       revision: 1,
       frameImages: {
         a: {

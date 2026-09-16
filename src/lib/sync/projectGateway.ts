@@ -188,13 +188,6 @@ export const downloadProjectImage = async (client: SupabaseClient, path: string)
   return data
 }
 
-export const deleteProjectImage = async (client: SupabaseClient, path: string): Promise<void> => {
-  const { error } = await client.storage.from(PROJECT_IMAGES_BUCKET).remove([path])
-  if (error) {
-    throw error
-  }
-}
-
 export {
   buildFrameImageFolder,
   buildProjectImageFolder,

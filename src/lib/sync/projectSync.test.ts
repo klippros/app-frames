@@ -23,7 +23,6 @@ vi.mock('./contentHash', () => ({
 vi.mock('./projectGateway', () => ({
   saveProjectSnapshot: vi.fn(async (input: { revision: number }) => input.revision),
   uploadProjectImage: vi.fn(async () => 'created'),
-  deleteProjectImage: vi.fn(async () => undefined),
   deleteUnreferencedProjectImages: vi.fn(
     async (_client: unknown, _projectId: string, paths: string[]) => paths,
   ),
@@ -57,9 +56,6 @@ vi.mock('./idb', () => {
       blobs.set(key, blob)
     }),
     getBlob: vi.fn(async (key: string) => blobs.get(key)),
-    deleteBlob: vi.fn(async (key: string) => {
-      blobs.delete(key)
-    }),
     deleteBlobsByProjectPrefix: vi.fn(async (userId: string, projectId: string) => {
       const prefix = `${userId}/${projectId}`
       for (const key of [...blobs.keys()]) {
@@ -310,26 +306,30 @@ describe('projectSync', () => {
     expect(statuses).toContain(SyncStatus.Synced)
   })
 
-  it('rejects a failed initial save, keeps it queued, and recovers on retry', async () => {
+  it('only completes a snapshot after its queued RPC succeeds', async () => {
     const idb = await import('./idb')
     const statuses: Array<{ status: SyncStatus; message?: string }> = []
-    await startAndSettleInitialFlush((status, message) => {
-      statuses.push({ status, message })
-    })
+    const onCompletion = vi.fn()
+    startProjectSync(
+      {} as never,
+      USER_ID,
+      (status, message) => {
+        statuses.push({ status, message })
+      },
+      (completion) => {
+        onCompletion(completion)
+      },
+    )
+    await waitForFlush()
     vi.mocked(gateway.saveProjectSnapshot).mockRejectedValueOnce(new Error('database unavailable'))
-    const onQueued = vi.fn()
 
-    await expect(
-      syncWorkspace(USER_ID, createProjectWorkspace(), (queued) => {
-        onQueued(queued)
-      }),
-    ).rejects.toMatchObject({
+    await expect(syncWorkspace(USER_ID, createProjectWorkspace())).rejects.toMatchObject({
       kind: SyncFailureKind.Error,
       message: 'database unavailable',
     })
 
     const queue = (idb as unknown as { getTestQueue: () => Array<{ kind: string }> }).getTestQueue()
-    expect(onQueued).toHaveBeenCalledWith(expect.objectContaining({ revision: 2 }))
+    expect(onCompletion).not.toHaveBeenCalled()
     expect(queue.map((item) => item.kind)).toEqual(['save-project-snapshot'])
     expect(statuses.at(-1)).toEqual({
       status: SyncStatus.Error,
@@ -338,6 +338,16 @@ describe('projectSync', () => {
 
     await expect(flushProjectSync()).resolves.toBeUndefined()
     expect(queue).toHaveLength(0)
+    expect(onCompletion).toHaveBeenCalledOnce()
+    expect(onCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: PROJECT_ID,
+        revision: 2,
+        frameImages: {
+          [FRAME_ID]: expect.objectContaining({ storagePath: IMAGE_PATH }),
+        },
+      }),
+    )
     expect(statuses.at(-1)?.status).toBe(SyncStatus.Synced)
   })
 
@@ -434,7 +444,6 @@ describe('projectSync', () => {
 
     expect(gateway.uploadProjectImage).not.toHaveBeenCalled()
     expect(gateway.saveProjectSnapshot).toHaveBeenCalled()
-    expect(gateway.deleteProjectImage).not.toHaveBeenCalled()
   })
 
   it('does not re-upload the same image on a later save in the same session', async () => {
@@ -513,7 +522,7 @@ describe('projectSync', () => {
     })
 
     await expect(
-      syncWorkspace(USER_ID, createProjectWorkspace(), undefined, generation ?? undefined),
+      syncWorkspace(USER_ID, createProjectWorkspace(), generation ?? undefined),
     ).rejects.toThrow('authenticated session changed')
     expect(idb.enqueueWrite).not.toHaveBeenCalled()
     expect(gateway.saveProjectSnapshot).not.toHaveBeenCalled()

@@ -20,8 +20,17 @@ sign-in unlocks private named projects.
   discards them. They are never written to `localStorage` or IndexedDB.
 - **Named projects** (signed-in only) upload normalized WebP frames and settings
   to private Supabase Storage and Postgres tables protected by RLS.
-- Images are downscaled when wider than 1080px and re-encoded before upload.
-- Signing out clears this browser’s cached project data for that account.
+- Each save is one transactional project snapshot. An expected server revision
+  prevents a stale browser from overwriting a newer revision; conflicts remain
+  queued locally and are reported instead of partially updating frames.
+- Accounts are limited to 3 projects with 10 frames each. Input is limited to
+  static PNG, JPEG, GIF, or WebP (no SVG or animated containers), 40 MiB and
+  40 megapixels. Images are capped at 1080px wide, re-encoded as WebP, and must
+  compress below 1.5 MiB.
+- Signing out clears that account’s IndexedDB queue and blobs even if the final
+  sync fails or times out. Token expiry and account replacement stop sync first,
+  discard the prior account’s local data without flushing it, and reset the
+  in-memory workspace.
 
 ## Optional Supabase auth
 
@@ -32,8 +41,9 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
 
-Leave both blank to keep the app fully anonymous. Configure Google OAuth and
-email magic-link providers in the Supabase dashboard, and allow the callback URL:
+Leave either value blank to keep the app fully anonymous. Configure Google OAuth
+and email magic-link providers in the Supabase dashboard, and allow the exact
+production callback URL (do not use a wildcard):
 
 `https://<host>/tools/app-frames/auth/callback`
 

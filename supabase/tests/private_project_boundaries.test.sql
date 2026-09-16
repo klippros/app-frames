@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(41);
+select plan(45);
 
 insert into auth.users (id, email)
 values
@@ -73,6 +73,23 @@ values
     '20000000-0000-4000-8000-000000000002',
     '{"mimetype":"image/webp","size":1}'
   );
+
+select ok(
+  not has_table_privilege('authenticated', 'public.projects', 'INSERT'),
+  'authenticated has no broad project INSERT grant'
+);
+select ok(
+  has_column_privilege('authenticated', 'public.projects', 'last_snapshot_id', 'INSERT'),
+  'snapshot callers can insert the project snapshot id'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.projects', 'created_at', 'UPDATE'),
+  'snapshot callers cannot update server timestamps directly'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.project_frames', 'user_id', 'UPDATE'),
+  'snapshot callers cannot reassign frame ownership'
+);
 
 set local role authenticated;
 set local "request.jwt.claims" =

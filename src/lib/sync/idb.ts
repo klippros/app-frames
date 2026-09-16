@@ -1,9 +1,8 @@
 const DB_NAME = 'app-frames'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const STORE_BLOBS = 'project-blobs'
 export const STORE_QUEUE = 'project-queue'
-export const STORE_META = 'project-meta'
 
 interface QueuedWriteBase {
   id: string
@@ -43,13 +42,7 @@ interface QueuedProjectDeleteWrite extends QueuedWriteBase {
   payload: { projectId: string }
 }
 
-interface QueuedObjectDeleteWrite extends QueuedWriteBase {
-  kind: 'delete-object'
-  payload: { imagePath: string }
-}
-
-export type QueuedProjectWrite =
-  QueuedProjectSnapshotWrite | QueuedProjectDeleteWrite | QueuedObjectDeleteWrite
+export type QueuedProjectWrite = QueuedProjectSnapshotWrite | QueuedProjectDeleteWrite
 
 const openDb = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
@@ -67,9 +60,8 @@ const openDb = (): Promise<IDBDatabase> =>
         const queue = db.createObjectStore(STORE_QUEUE, { keyPath: 'id' })
         queue.createIndex('byUser', 'userId', { unique: false })
       }
-      if (!db.objectStoreNames.contains(STORE_META)) {
-        const meta = db.createObjectStore(STORE_META, { keyPath: 'key' })
-        meta.createIndex('byUser', 'userId', { unique: false })
+      if (db.objectStoreNames.contains('project-meta')) {
+        db.deleteObjectStore('project-meta')
       }
     }
     request.onsuccess = () => {
@@ -124,12 +116,6 @@ export const getBlob = async (key: string): Promise<Blob | undefined> => {
     store.get(key),
   )
   return row?.blob
-}
-
-export const deleteBlob = async (key: string): Promise<void> => {
-  await withStore(STORE_BLOBS, 'readwrite', (store) => {
-    store.delete(key)
-  })
 }
 
 /** Delete IndexedDB blobs whose key starts with `{userId}/{projectId}`. */
@@ -208,8 +194,8 @@ export const dequeueWrite = async (id: string): Promise<void> => {
 export const clearUserData = async (userId: string): Promise<void> => {
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction([STORE_BLOBS, STORE_QUEUE, STORE_META], 'readwrite')
-    for (const storeName of [STORE_BLOBS, STORE_QUEUE, STORE_META]) {
+    const tx = db.transaction([STORE_BLOBS, STORE_QUEUE], 'readwrite')
+    for (const storeName of [STORE_BLOBS, STORE_QUEUE]) {
       const store = tx.objectStore(storeName)
       const index = store.index('byUser')
       const request = index.openCursor(IDBKeyRange.only(userId))
@@ -234,8 +220,8 @@ export const clearUserData = async (userId: string): Promise<void> => {
 export const clearAllAppData = async (): Promise<void> => {
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction([STORE_BLOBS, STORE_QUEUE, STORE_META], 'readwrite')
-    for (const storeName of [STORE_BLOBS, STORE_QUEUE, STORE_META]) {
+    const tx = db.transaction([STORE_BLOBS, STORE_QUEUE], 'readwrite')
+    for (const storeName of [STORE_BLOBS, STORE_QUEUE]) {
       tx.objectStore(storeName).clear()
     }
     tx.oncomplete = () => {

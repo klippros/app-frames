@@ -133,13 +133,9 @@ export const useWorkspace = () => {
     dispatch({ type: 'LOAD_WORKSPACE', workspace: next })
   }, [])
 
-  const setProjectMeta = useCallback((id: string, name: string, ownerId: string) => {
-    dispatch({ type: 'SET_PROJECT_META', id, name, ownerId })
-  }, [])
-
   const markSynced = useCallback(
-    (revision: number, frameImages?: Record<string, WorkspaceImageMeta>) => {
-      dispatch({ type: 'MARK_SYNCED', revision, frameImages })
+    (projectId: string, revision: number, frameImages?: Record<string, WorkspaceImageMeta>) => {
+      dispatch({ type: 'MARK_SYNCED', projectId, revision, frameImages })
     },
     [],
   )
@@ -197,11 +193,10 @@ export const useWorkspace = () => {
       if (generation === null) {
         throw new Error('Project sync is not active for the authenticated user.')
       }
-      const synced = await syncWorkspace(ownerId, next, undefined, generation)
-      markSynced(synced.revision, synced.frameImages)
+      await syncWorkspace(ownerId, next, generation)
       return projectId
     },
-    [markSynced, workspace],
+    [workspace],
   )
 
   const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace, markSynced)
@@ -228,7 +223,6 @@ export const useWorkspace = () => {
     setShowBezel,
     resetWorkspace,
     loadWorkspace,
-    setProjectMeta,
     promoteToProject,
     saveNow,
   }

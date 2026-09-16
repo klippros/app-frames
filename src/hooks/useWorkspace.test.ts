@@ -89,10 +89,7 @@ describe('useWorkspace session transitions', () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:replacement')
     vi.mocked(countProjects).mockResolvedValue(0)
     vi.mocked(getProjectSyncGeneration).mockReturnValue(1)
-    vi.mocked(syncWorkspace).mockImplementation(async (_ownerId, workspace) => ({
-      revision: workspace.revision,
-      frameImages: {},
-    }))
+    vi.mocked(syncWorkspace).mockResolvedValue(undefined)
   })
 
   it('clears and revokes the old workspace on direct account replacement', async () => {
@@ -130,10 +127,7 @@ describe('useWorkspace project and replacement workflows', () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:replacement')
     vi.mocked(countProjects).mockResolvedValue(0)
     vi.mocked(getProjectSyncGeneration).mockReturnValue(1)
-    vi.mocked(syncWorkspace).mockImplementation(async (_ownerId, workspace) => ({
-      revision: workspace.revision,
-      frameImages: {},
-    }))
+    vi.mocked(syncWorkspace).mockResolvedValue(undefined)
   })
 
   it('creates and syncs a named project with no frames', async () => {
@@ -155,7 +149,6 @@ describe('useWorkspace project and replacement workflows', () => {
     expect(syncWorkspace).toHaveBeenCalledWith(
       'user-a',
       expect.objectContaining({ id: projectId, name: 'Empty project', frames: [] }),
-      undefined,
       1,
     )
   })

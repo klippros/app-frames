@@ -17,7 +17,12 @@ export type WorkspaceAction =
   | { type: 'SET_GRADIENT_BASE_COLOR'; gradientBaseColor: string }
   | { type: 'SET_SHOW_BEZEL'; showBezel: boolean }
   | { type: 'SET_PROJECT_META'; id: string; name: string; ownerId: string }
-  | { type: 'MARK_SYNCED'; revision: number; frameImages?: Record<string, WorkspaceImageMeta> }
+  | {
+      type: 'MARK_SYNCED'
+      projectId: string
+      revision: number
+      frameImages?: Record<string, WorkspaceImageMeta>
+    }
 
 const revokeFrameUrls = (frames: WorkspaceFrame[]) => {
   for (const frame of frames) {
@@ -162,6 +167,9 @@ export const workspaceReducer = (state: Workspace, action: WorkspaceAction): Wor
         syncedRevision: null,
       }
     case 'MARK_SYNCED': {
+      if (state.kind !== 'project' || state.id !== action.projectId) {
+        return state
+      }
       const { frameImages } = action
       const syncedRevision = Math.min(
         state.revision,

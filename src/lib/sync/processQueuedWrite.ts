@@ -3,7 +3,6 @@ import type { QueuedProjectSnapshotWrite, QueuedProjectWrite } from './idb'
 import { getBlob } from './idb'
 import {
   deleteProject,
-  deleteProjectImage,
   deleteProjectImages,
   deleteUnreferencedProjectImages,
   saveProjectSnapshot,
@@ -108,10 +107,6 @@ export const processQueuedWrite = async (
       const projectId = item.payload.projectId
       await deleteProject(client, projectId)
       await deleteProjectImages(client, item.userId, projectId).catch(() => undefined)
-      break
-    }
-    case 'delete-object': {
-      await deleteProjectImage(client, item.payload.imagePath)
       break
     }
     default:
