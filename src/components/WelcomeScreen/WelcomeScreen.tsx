@@ -12,7 +12,6 @@ export interface WelcomeScreenProps {
   projects: ProjectRow[]
   projectsLoading?: boolean
   projectsError?: string | null
-  openingProjectId?: string | null
   onSelectScreenshots: (screenshots: Screenshot[]) => void
   onOpenProject: (projectId: string) => void
   onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
@@ -24,7 +23,6 @@ export const WelcomeScreen = ({
   projects,
   projectsLoading = false,
   projectsError = null,
-  openingProjectId = null,
   onSelectScreenshots,
   onOpenProject,
   onCreateProject,
@@ -76,7 +74,6 @@ export const WelcomeScreen = ({
       {!projectsLoading && (
         <WelcomeProjectGrid
           projects={projects}
-          openingProjectId={openingProjectId}
           onSelectScreenshots={onSelectScreenshots}
           onOpenProject={onOpenProject}
           onCreateProject={onCreateProject}

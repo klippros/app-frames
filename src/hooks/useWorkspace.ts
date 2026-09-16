@@ -26,14 +26,18 @@ export const useWorkspace = () => {
   const [workspace, dispatch] = useReducer(workspaceReducer, undefined, createEmptySketch)
   const { authStatus, user } = useAuth()
   const previousUserId = useRef<string | null>(null)
+  const framesRef = useRef(workspace.frames)
+  framesRef.current = workspace.frames
 
+  // Only revoke leftover blob URLs on unmount. Tying this effect to `frames`
+  // also revoked still-used URLs whenever MARK_SYNCED replaced the array.
   useEffect(
     () => () => {
-      for (const frame of workspace.frames) {
+      for (const frame of framesRef.current) {
         URL.revokeObjectURL(frame.url)
       }
     },
-    [workspace.frames],
+    [],
   )
 
   useEffect(() => {

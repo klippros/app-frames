@@ -16,7 +16,6 @@ export interface ScreenshotWorkspaceProps {
   projects: ProjectRow[]
   projectsLoading?: boolean
   projectsError?: string | null
-  openingProjectId?: string | null
   screenshotError?: string | null
   onSelect: (screenshots: Screenshot[]) => void
   onReplace: (id: string, file: File) => void
@@ -38,7 +37,6 @@ export const ScreenshotWorkspace = ({
   projects,
   projectsLoading = false,
   projectsError = null,
-  openingProjectId = null,
   screenshotError = null,
   onSelect,
   onReplace,
@@ -69,7 +67,6 @@ export const ScreenshotWorkspace = ({
           projects={projects}
           projectsLoading={projectsLoading}
           projectsError={projectsError}
-          openingProjectId={openingProjectId}
           screenshotError={screenshotError}
           onSelectScreenshots={onSelect}
           onOpenProject={onOpenProject}

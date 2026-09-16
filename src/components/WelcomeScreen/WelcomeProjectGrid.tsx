@@ -10,7 +10,6 @@ import { ProjectFolderTile } from './ProjectFolderTile'
 
 export interface WelcomeProjectGridProps {
   projects: ProjectRow[]
-  openingProjectId?: string | null
   onSelectScreenshots: (screenshots: Screenshot[]) => void
   onOpenProject: (projectId: string) => void
   onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
@@ -19,7 +18,6 @@ export interface WelcomeProjectGridProps {
 
 export const WelcomeProjectGrid = ({
   projects,
-  openingProjectId = null,
   onSelectScreenshots,
   onOpenProject,
   onCreateProject,
@@ -35,8 +33,6 @@ export const WelcomeProjectGrid = ({
           <ProjectFolderTile
             key={project.id}
             name={project.name}
-            disabled={openingProjectId !== null}
-            opening={openingProjectId === project.id}
             onClick={() => {
               onOpenProject(project.id)
             }}

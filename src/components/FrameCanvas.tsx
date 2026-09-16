@@ -63,12 +63,12 @@ export const FrameCanvas = ({
             showBezel,
           },
         )
-      } catch {
-        // Keep the previous canvas contents when drawing fails.
-      } finally {
+
         if (!cancelled) {
           onRenderedRef.current?.()
         }
+      } catch {
+        // Keep the previous canvas contents when drawing fails.
       }
     })()
 
