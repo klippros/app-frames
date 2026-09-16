@@ -34,7 +34,7 @@ describe('performSignOutCleanup', () => {
     expect(idb.clearUserData).toHaveBeenCalledWith('user-1')
   })
 
-  it('reports a failed flush but continues logout cleanup', async () => {
+  it('logs out and clears local data when unsynced work cannot flush', async () => {
     const { performSignOutCleanup, SignOutFlushOutcome } = await import('./signOutCleanup')
     const sync = await import('./projectSync')
     const idb = await import('./idb')

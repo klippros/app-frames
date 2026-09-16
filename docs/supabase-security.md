@@ -1,35 +1,36 @@
-# Supabase schema security checklist
+# Supabase security tests
 
-Apply migrations with the Supabase CLI against a linked project or local stack,
-then verify ownership isolation before enabling production auth.
+The automated security suite uses two fixed local auth users, switches JWT
+claims inside transaction-wrapped pgTAP tests, and never contacts a hosted
+project.
 
-## Apply
+## Local prerequisites and commands
 
-```bash
-supabase start          # local
-supabase db reset       # local, applies migrations
-# or
-supabase db push        # linked remote project
-```
-
-## Advisor checks
+Install Docker and Supabase CLI 2.116.0 or newer. Start the local stack before
+running either command; a missing CLI, Docker daemon, or local stack is an
+error, not a skipped test.
 
 ```bash
-supabase db advisors
+supabase start
+supabase db reset
+pnpm test:db
+pnpm test:db:lint
 ```
 
-Fix any RLS / security advisor findings before shipping.
+`pnpm test:db` runs `supabase test db --local`. It covers project and frame
+CRUD isolation, private Storage policies and bucket restrictions, ownership
+spoofing, quotas, and atomic snapshot authorization/conflicts/reordering.
+These local tests use no service-role browser credentials or CI secrets.
 
-## Two-user isolation matrix
+## Hosted advisor checks
 
-Create two authenticated users (A and B). Confirm:
+Advisor checks are environment-dependent and intentionally separate from local
+CI. Link the intended project and authenticate the CLI, then run:
 
-1. A can insert/select/update/delete only A’s `projects` and `project_frames` rows.
-2. B’s queries never return A’s rows (including by guessing UUIDs).
-3. A can upload/download/delete objects only under `project-images/{A_user_id}/...`.
-4. A cannot list or download B’s storage objects.
-5. Uploading a non-WebP or >1.5 MiB object is rejected by the bucket limits.
-6. Frame `image_path` values that do not start with the caller’s user id fail the check constraint.
+```bash
+supabase link --project-ref <project-ref>
+supabase db advisors --linked
+```
 
 ## Manual security matrix
 

@@ -13,6 +13,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:db": "supabase test db --local && pnpm test:storage:local",
+    "test:db:lint": "supabase db lint --local --fail-on error",
+    "test:storage:local": "vitest run --config vitest.local-supabase.config.ts",
     "test:watch": "vitest",
     "preview": "vite preview"
   },
