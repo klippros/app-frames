@@ -52,7 +52,7 @@ export const EditorApp = () => {
 
   return (
     <Box display="flex" flexDirection="column" h="100dvh" overflow="hidden" position="relative">
-      <Box as="header" flexShrink={0} position="relative" zIndex={1}>
+      <Box as="header" flexShrink={0} position="relative" zIndex={2}>
         <AppHeader
           hasScreenshots={hasScreenshots}
           screenshotCount={workspaceState.screenshots.length}

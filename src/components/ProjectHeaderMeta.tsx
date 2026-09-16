@@ -1,4 +1,7 @@
-import { Text } from '@chakra-ui/react'
+import { Box, HStack, Text, Tooltip, VStack } from '@chakra-ui/react'
+import { faCloud, faCloudArrowUp, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { SyncStatus } from '../lib/sync/projectSync'
 
 export interface ProjectHeaderMetaProps {
@@ -7,18 +10,45 @@ export interface ProjectHeaderMetaProps {
   syncMessage?: string
 }
 
-const syncLabel = (status: SyncStatus, message?: string): string | null => {
+interface SyncPresentation {
+  icon: IconDefinition
+  label: string
+  detail: string
+  color: string
+}
+
+const syncPresentation = (status: SyncStatus, message?: string): SyncPresentation | null => {
   if (status === SyncStatus.Syncing) {
-    return 'Saving…'
+    return {
+      icon: faCloudArrowUp,
+      label: 'Saving…',
+      detail: 'Uploading your latest changes to the cloud.',
+      color: 'whiteAlpha.800',
+    }
   }
   if (status === SyncStatus.Synced) {
-    return 'Saved'
+    return {
+      icon: faCloud,
+      label: 'Saved',
+      detail: 'All changes are saved to your project.',
+      color: 'whiteAlpha.700',
+    }
   }
   if (status === SyncStatus.Error) {
-    return message ?? 'Save failed'
+    return {
+      icon: faExclamationTriangle,
+      label: 'Save failed',
+      detail: message ?? 'Something went wrong while saving. Try again when you are back online.',
+      color: 'red.300',
+    }
   }
   if (status === SyncStatus.Conflict) {
-    return 'Conflict — refresh project'
+    return {
+      icon: faExclamationTriangle,
+      label: 'Conflict',
+      detail: message ?? 'This project changed elsewhere. Refresh to load the latest version.',
+      color: 'orange.200',
+    }
   }
   return null
 }
@@ -32,10 +62,10 @@ export const ProjectHeaderMeta = ({
     return null
   }
 
-  const statusText = syncLabel(syncStatus, syncMessage)
+  const presentation = syncPresentation(syncStatus, syncMessage)
 
   return (
-    <>
+    <HStack gap={2} align="center" minW={0}>
       <Text
         fontSize="sm"
         fontWeight="semibold"
@@ -45,15 +75,39 @@ export const ProjectHeaderMeta = ({
         textOverflow="ellipsis"
         whiteSpace="nowrap"
         title={projectName}
-        aria-label={`Project ${projectName}`}
       >
         {projectName}
       </Text>
-      {statusText !== null && (
-        <Text fontSize="xs" color="whiteAlpha.600" whiteSpace="nowrap">
-          {statusText}
-        </Text>
+      {presentation !== null && (
+        <Tooltip.Root openDelay={200} closeDelay={100}>
+          <Tooltip.Trigger asChild>
+            <Box
+              as="span"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              flexShrink={0}
+              color={presentation.color}
+              cursor="default"
+              aria-label={presentation.label}
+            >
+              <FontAwesomeIcon icon={presentation.icon} />
+            </Box>
+          </Tooltip.Trigger>
+          <Tooltip.Positioner>
+            <Tooltip.Content maxW="16rem">
+              <VStack gap={1} align="flex-start">
+                <Text fontSize="sm" fontWeight="semibold" lineHeight="short">
+                  {presentation.label}
+                </Text>
+                <Text fontSize="xs" color="fg.muted" lineHeight="short">
+                  {presentation.detail}
+                </Text>
+              </VStack>
+            </Tooltip.Content>
+          </Tooltip.Positioner>
+        </Tooltip.Root>
       )}
-    </>
+    </HStack>
   )
 }

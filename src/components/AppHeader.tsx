@@ -1,13 +1,13 @@
-import { Flex, HStack } from '@chakra-ui/react'
-import type { ReactNode } from 'react'
+import { Flex, HStack, Stack } from '@chakra-ui/react'
 import { toolbarControlSize } from '../layout'
 import type { Platform, Screenshot } from '../types'
 import type { SyncStatus } from '../lib/sync/projectSync'
+import { AppNavbar } from './AppNavbar/AppNavbar'
 import { AuthControls } from './AuthControls'
 import { BrandLogos } from './BrandLogos'
+import { MobileNavMenu } from './MobileNavMenu/MobileNavMenu'
 import { ContentContainer } from './ContentContainer'
-import { HeaderEditorControls } from './HeaderEditorControls'
-import { ProjectHeaderMeta } from './ProjectHeaderMeta'
+import { ProjectToolbar } from './ProjectToolbar'
 
 export interface AppHeaderProps {
   hasScreenshots: boolean
@@ -25,7 +25,6 @@ export interface AppHeaderProps {
   onAddScreenshots: (screenshots: Screenshot[]) => void
   onExportClick: () => void
   onSaveProjectClick?: () => void
-  trailing?: ReactNode
 }
 
 export const AppHeader = ({
@@ -44,17 +43,42 @@ export const AppHeader = ({
   onAddScreenshots,
   onExportClick,
   onSaveProjectClick,
-  trailing,
 }: AppHeaderProps) => (
   <ContentContainer>
-    <Flex py={4} align="center" gap={4} minH={toolbarControlSize}>
-      <BrandLogos />
-      <HeaderEditorControls
+    <Stack gap={4} py={4}>
+      <Flex align="center" gap={4} minH={toolbarControlSize}>
+        <BrandLogos />
+        <HStack
+          flex="1"
+          gap={{ base: 1, md: 6 }}
+          align="center"
+          justify="flex-end"
+          minW={0}
+          display={{ base: 'none', md: 'flex' }}
+        >
+          <AppNavbar />
+          <AuthControls syncStatus={syncStatus} />
+        </HStack>
+        <HStack
+          flex="1"
+          gap={1}
+          align="center"
+          justify="flex-end"
+          minW={0}
+          display={{ base: 'flex', md: 'none' }}
+        >
+          <MobileNavMenu syncStatus={syncStatus} />
+        </HStack>
+      </Flex>
+      <ProjectToolbar
         hasScreenshots={hasScreenshots}
         screenshotCount={screenshotCount}
         platform={platform}
         gradientBaseColor={gradientBaseColor}
         showBezel={showBezel}
+        projectName={projectName}
+        syncStatus={syncStatus}
+        syncMessage={syncMessage}
         showSaveProject={showSaveProject}
         onPlatformChange={onPlatformChange}
         onGradientBaseColorChange={onGradientBaseColorChange}
@@ -63,15 +87,6 @@ export const AppHeader = ({
         onExportClick={onExportClick}
         onSaveProjectClick={onSaveProjectClick}
       />
-      <HStack flex="1" gap={3} align="center" justify="flex-end" minW={0}>
-        <ProjectHeaderMeta
-          projectName={projectName}
-          syncStatus={syncStatus}
-          syncMessage={syncMessage}
-        />
-        {trailing}
-        <AuthControls syncStatus={syncStatus} />
-      </HStack>
-    </Flex>
+    </Stack>
   </ContentContainer>
 )
