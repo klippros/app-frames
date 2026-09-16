@@ -1,4 +1,4 @@
-import { Button, Flex, Heading, Spinner, Text, VStack } from '@chakra-ui/react'
+import { Flex, Heading, Spinner, Text, VStack } from '@chakra-ui/react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/authContext'
 import type { ProjectRow } from '../../lib/supabase/schema'
@@ -53,16 +53,6 @@ export const WelcomeScreen = ({
             <Text fontSize="sm" color="red.300" textAlign="center">
               {screenshotError}
             </Text>
-          )}
-          {isConfigured && authStatus === AuthStatus.Anonymous && (
-            <Button
-              variant="cancel"
-              onClick={() => {
-                setSignInOpen(true)
-              }}
-            >
-              Sign in
-            </Button>
           )}
           {isConfigured && <SignInDialog open={signInOpen} onOpenChange={setSignInOpen} />}
         </VStack>
