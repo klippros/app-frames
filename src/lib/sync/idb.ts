@@ -5,14 +5,51 @@ export const STORE_BLOBS = 'project-blobs'
 export const STORE_QUEUE = 'project-queue'
 export const STORE_META = 'project-meta'
 
-export interface QueuedProjectWrite {
+interface QueuedWriteBase {
   id: string
   userId: string
   projectId: string
-  kind: 'upsert-project' | 'upsert-frame' | 'delete-frame' | 'delete-project' | 'delete-object'
-  payload: Record<string, unknown>
   createdAt: string
 }
+
+export interface QueuedSnapshotFrame {
+  id: string
+  frameOrder: number
+  settings: Record<string, unknown>
+  imagePath: string
+  imageContentType: 'image/webp'
+  imageByteSize: number
+  imageWidth?: number
+  imageHeight?: number
+  imageContentHash?: string
+  blobKey: string
+  needsImageUpload: boolean
+}
+
+export interface QueuedProjectSnapshotWrite extends QueuedWriteBase {
+  kind: 'save-project-snapshot'
+  payload: {
+    expectedRevision: number | null
+    name: string
+    revision: number
+    globalSettings: Record<string, unknown>
+    clientUpdatedAt: string
+    frames: QueuedSnapshotFrame[]
+  }
+}
+
+interface QueuedProjectDeleteWrite extends QueuedWriteBase {
+  kind: 'delete-project'
+  payload: { projectId: string }
+}
+
+interface QueuedObjectDeleteWrite extends QueuedWriteBase {
+  kind: 'delete-object'
+  payload: { imagePath: string }
+}
+
+export type QueuedProjectWrite =
+  QueuedProjectSnapshotWrite | QueuedProjectDeleteWrite | QueuedObjectDeleteWrite
 
 const openDb = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {

@@ -2,8 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Workspace, WorkspaceFrame, WorkspaceImageMeta } from '../../workspace/types'
 import { buildProjectImagePath } from '../supabase/schema'
 import { hashBlob } from './contentHash'
+import type { QueuedProjectSnapshotWrite, QueuedSnapshotFrame } from './idb'
 import {
-  deleteBlob,
   deleteBlobsByProjectPrefix,
   dequeueWrite,
   enqueueWrite,
@@ -37,6 +37,7 @@ let flushChain: Promise<void> = Promise.resolve()
 let activeUserId: string | null = null
 let activeClient: SupabaseClient | null = null
 let statusListener: StatusListener | null = null
+const knownServerRevisions = new Map<string, number>()
 
 const setStatus = (status: SyncStatus, message?: string) => {
   statusListener?.(status, message)
@@ -68,15 +69,15 @@ export const stopProjectSync = () => {
   activeUserId = null
   statusListener = null
   clearUploadedImagePaths()
+  knownServerRevisions.clear()
 }
 
-const blobKey = (userId: string, projectId: string, frameId: string) =>
-  `${userId}/${projectId}/${frameId}`
+const blobKey = (userId: string, projectId: string, frameId: string, contentHash: string) =>
+  `${userId}/${projectId}/${frameId}/${contentHash}`
 
 export const queueWorkspaceSave = async (
   userId: string,
   workspace: Workspace,
-  deletedFrames: readonly { id: string; imagePath?: string }[] = [],
 ): Promise<Record<string, WorkspaceImageMeta>> => {
   if (workspace.kind !== 'project' || workspace.id === null || workspace.name === null) {
     return {}
@@ -85,29 +86,38 @@ export const queueWorkspaceSave = async (
   const projectId = workspace.id
   const clientUpdatedAt = new Date().toISOString()
   const frameImages: Record<string, WorkspaceImageMeta> = {}
+  const frames: QueuedSnapshotFrame[] = []
 
-  for (const deleted of deletedFrames) {
-    await queueFrameDelete(userId, projectId, deleted.id, deleted.imagePath)
+  for (const frame of workspace.frames) {
+    const queued = await prepareFrameSnapshot(userId, projectId, frame)
+    frameImages[frame.id] = queued.image
+    frames.push(queued.payload)
   }
+
+  const pending = (await listQueueForUser(userId)).filter(
+    (item): item is QueuedProjectSnapshotWrite =>
+      item.projectId === projectId && item.kind === 'save-project-snapshot',
+  )
+  const expectedRevision =
+    pending.at(-1)?.payload.revision ??
+    knownServerRevisions.get(`${userId}/${projectId}`) ??
+    workspace.syncedRevision
 
   await enqueueWrite({
     id: crypto.randomUUID(),
     userId,
     projectId,
-    kind: 'upsert-project',
+    kind: 'save-project-snapshot',
     createdAt: clientUpdatedAt,
     payload: {
-      id: projectId,
+      expectedRevision,
       name: workspace.name,
       revision: workspace.revision,
-      globalSettings: workspace.globalSettings,
+      globalSettings: { ...workspace.globalSettings },
       clientUpdatedAt,
+      frames,
     },
   })
-
-  for (const frame of workspace.frames) {
-    frameImages[frame.id] = await queueFrameSave(userId, projectId, frame)
-  }
 
   return frameImages
 }
@@ -120,12 +130,11 @@ export interface SyncedWorkspaceRevision {
 export const syncWorkspace = async (
   userId: string,
   workspace: Workspace,
-  deletedFrames: readonly { id: string; imagePath?: string }[] = [],
   onQueued?: (queued: SyncedWorkspaceRevision) => void,
 ): Promise<SyncedWorkspaceRevision> => {
   let frameImages: Record<string, WorkspaceImageMeta>
   try {
-    frameImages = await queueWorkspaceSave(userId, workspace, deletedFrames)
+    frameImages = await queueWorkspaceSave(userId, workspace)
   } catch (error) {
     throw reportSyncFailure(error)
   }
@@ -136,15 +145,17 @@ export const syncWorkspace = async (
   return queued
 }
 
-export const queueFrameSave = async (
+const prepareFrameSnapshot = async (
   userId: string,
   projectId: string,
   frame: WorkspaceFrame,
-): Promise<WorkspaceImageMeta> => {
-  const key = blobKey(userId, projectId, frame.id)
-  await putBlob(userId, key, frame.file)
-
+): Promise<{
+  image: WorkspaceImageMeta
+  payload: QueuedSnapshotFrame
+}> => {
   const contentHash = frame.image?.contentHash ?? (await hashBlob(frame.file))
+  const key = blobKey(userId, projectId, frame.id, contentHash)
+  await putBlob(userId, key, frame.file)
   const imagePath =
     frame.image?.storagePath ?? buildProjectImagePath(userId, projectId, frame.id, contentHash)
 
@@ -157,17 +168,12 @@ export const queueFrameSave = async (
     storagePath: imagePath,
   }
 
-  await enqueueWrite({
-    id: crypto.randomUUID(),
-    userId,
-    projectId,
-    kind: 'upsert-frame',
-    createdAt: new Date().toISOString(),
+  return {
+    image,
     payload: {
       id: frame.id,
-      projectId,
       frameOrder: frame.order,
-      settings: frame.settings,
+      settings: { ...frame.settings },
       imagePath,
       imageContentType: 'image/webp',
       imageByteSize: frame.file.size,
@@ -177,38 +183,7 @@ export const queueFrameSave = async (
       blobKey: key,
       needsImageUpload: !frame.image?.storagePath && !hasUploadedPath(userId, imagePath),
     },
-  })
-
-  return image
-}
-
-export const queueFrameDelete = async (
-  userId: string,
-  projectId: string,
-  frameId: string,
-  imagePath?: string,
-): Promise<void> => {
-  const pending = await listQueueForUser(userId)
-  for (const item of pending) {
-    if (
-      item.projectId === projectId &&
-      item.kind === 'upsert-frame' &&
-      String(item.payload.id) === frameId
-    ) {
-      await dequeueWrite(item.id)
-    }
   }
-
-  await deleteBlob(blobKey(userId, projectId, frameId)).catch(() => undefined)
-
-  await enqueueWrite({
-    id: crypto.randomUUID(),
-    userId,
-    projectId,
-    kind: 'delete-frame',
-    createdAt: new Date().toISOString(),
-    payload: { frameId, imagePath },
-  })
 }
 
 export const queueProjectDelete = async (userId: string, projectId: string): Promise<void> => {
@@ -249,9 +224,14 @@ export const flushProjectSync = (): Promise<void> => {
     try {
       for (const item of items) {
         await processQueuedWrite(client, item)
+        if (item.kind === 'save-project-snapshot') {
+          knownServerRevisions.set(`${item.userId}/${item.projectId}`, item.payload.revision)
+        }
         await dequeueWrite(item.id)
       }
-      setStatus(SyncStatus.Synced)
+      if ((await listQueueForUser(userId)).length === 0) {
+        setStatus(SyncStatus.Synced)
+      }
     } catch (error) {
       throw reportSyncFailure(error)
     }

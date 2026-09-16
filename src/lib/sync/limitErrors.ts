@@ -28,11 +28,7 @@ export const mapLimitError = (error: unknown): never => {
     throw new Error(PROJECT_LIMIT_MESSAGE)
   }
 
-  if (
-    haystack.includes('frame_order') ||
-    haystack.includes('project_frames_frame_order_check') ||
-    (haystack.includes('check_violation') && haystack.includes('frame'))
-  ) {
+  if (haystack.includes('project_snapshot_frame_limit') || haystack.includes('at most 10 frames')) {
     throw new Error(FRAME_LIMIT_MESSAGE)
   }
 

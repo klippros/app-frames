@@ -2,22 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ProjectFrameRow, ProjectRow } from '../supabase/schema'
 import { PROJECT_IMAGES_BUCKET } from '../supabase/schema'
 import { FRAME_LIMIT_MESSAGE, PROJECT_LIMIT_MESSAGE, mapLimitError } from './limitErrors'
+import { ProjectSyncError, SyncFailureKind } from './syncErrors'
 
 export { FRAME_LIMIT_MESSAGE, PROJECT_LIMIT_MESSAGE }
 
-export interface UpsertProjectInput {
+export interface ProjectSnapshotFrameInput {
   id: string
-  userId: string
-  name: string
-  revision: number
-  globalSettings: Record<string, unknown>
-  clientUpdatedAt: string
-}
-
-export interface UpsertFrameInput {
-  id: string
-  userId: string
-  projectId: string
   frameOrder: number
   settings: Record<string, unknown>
   imagePath: string
@@ -26,6 +16,17 @@ export interface UpsertFrameInput {
   imageWidth?: number
   imageHeight?: number
   imageContentHash?: string
+}
+
+export interface SaveProjectSnapshotInput {
+  projectId: string
+  expectedRevision: number | null
+  snapshotId: string
+  name: string
+  revision: number
+  globalSettings: Record<string, unknown>
+  clientUpdatedAt: string
+  frames: ProjectSnapshotFrameInput[]
 }
 
 export const listProjects = async (client: SupabaseClient): Promise<ProjectRow[]> => {
@@ -85,121 +86,52 @@ export const getProjectWithFrames = async (
   }
 }
 
-export const upsertProject = async (
+export const saveProjectSnapshot = async (
   client: SupabaseClient,
-  input: UpsertProjectInput,
-): Promise<ProjectRow> => {
-  const { data: existingRow, error: existingError } = await client
-    .from('projects')
-    .select('id')
-    .eq('id', input.id)
-    .maybeSingle()
+  input: SaveProjectSnapshotInput,
+): Promise<number> => {
+  const { data, error } = await client.rpc('save_project_snapshot', {
+    p_project_id: input.projectId,
+    p_expected_revision: input.expectedRevision,
+    p_snapshot_id: input.snapshotId,
+    p_name: input.name,
+    p_revision: input.revision,
+    p_global_settings: input.globalSettings,
+    p_client_updated_at: input.clientUpdatedAt,
+    p_frames: input.frames.map((frame) => ({
+      id: frame.id,
+      frame_order: frame.frameOrder,
+      settings: frame.settings,
+      image_path: frame.imagePath,
+      image_content_type: frame.imageContentType,
+      image_byte_size: frame.imageByteSize,
+      image_width: frame.imageWidth ?? null,
+      image_height: frame.imageHeight ?? null,
+      image_content_hash: frame.imageContentHash ?? null,
+    })),
+  })
 
-  if (existingError) {
-    throw existingError
-  }
-
-  const writable = {
-    name: input.name,
-    revision: input.revision,
-    global_settings: input.globalSettings,
-    client_updated_at: input.clientUpdatedAt,
-  }
-
-  if (existingRow) {
-    const { data, error } = await client
-      .from('projects')
-      .update(writable)
-      .eq('id', input.id)
-      .select('*')
-      .single()
-
-    if (error || !data) {
-      throw error ?? new Error('Project update returned no row')
-    }
-
-    return data as ProjectRow
-  }
-
-  // Ownership uses the column default auth.uid() — do not client-set user_id.
-  const { data, error } = await client
-    .from('projects')
-    .insert({
-      id: input.id,
-      ...writable,
-    })
-    .select('*')
-    .single()
-
-  if (error || !data) {
-    mapLimitError(error ?? new Error('Project insert returned no row'))
-  }
-
-  return data as ProjectRow
-}
-
-export const upsertFrame = async (
-  client: SupabaseClient,
-  input: UpsertFrameInput,
-): Promise<ProjectFrameRow> => {
-  const { data: existingRow, error: existingError } = await client
-    .from('project_frames')
-    .select('id')
-    .eq('id', input.id)
-    .maybeSingle()
-
-  if (existingError) {
-    throw existingError
-  }
-
-  const writable = {
-    frame_order: input.frameOrder,
-    settings: input.settings,
-    image_path: input.imagePath,
-    image_content_type: input.imageContentType,
-    image_byte_size: input.imageByteSize,
-    image_width: input.imageWidth ?? null,
-    image_height: input.imageHeight ?? null,
-    image_content_hash: input.imageContentHash ?? null,
-  }
-
-  if (existingRow) {
-    const { data, error } = await client
-      .from('project_frames')
-      .update(writable)
-      .eq('id', input.id)
-      .select('*')
-      .single()
-
-    if (error || !data) {
-      mapLimitError(error ?? new Error('Frame update returned no row'))
-    }
-
-    return data as ProjectFrameRow
-  }
-
-  const { data, error } = await client
-    .from('project_frames')
-    .insert({
-      id: input.id,
-      project_id: input.projectId,
-      ...writable,
-    })
-    .select('*')
-    .single()
-
-  if (error || !data) {
-    mapLimitError(error ?? new Error('Frame insert returned no row'))
-  }
-
-  return data as ProjectFrameRow
-}
-
-export const deleteFrame = async (client: SupabaseClient, frameId: string): Promise<void> => {
-  const { error } = await client.from('project_frames').delete().eq('id', frameId)
   if (error) {
-    throw error
+    mapLimitError(error)
   }
+
+  const result = Array.isArray(data) ? data[0] : data
+  if (!result || typeof result !== 'object') {
+    throw new Error('Project snapshot RPC returned no result')
+  }
+
+  const row = result as Record<string, unknown>
+  if (row.result_code === 'revision_conflict') {
+    throw new ProjectSyncError(
+      SyncFailureKind.Conflict,
+      'Sync conflict — the project changed on another client.',
+    )
+  }
+  if (row.result_code !== 'applied' || typeof row.server_revision !== 'number') {
+    throw new Error('Project snapshot RPC returned an invalid result')
+  }
+
+  return row.server_revision
 }
 
 export const deleteProject = async (client: SupabaseClient, projectId: string): Promise<void> => {
@@ -266,6 +198,7 @@ export const deleteProjectImage = async (client: SupabaseClient, path: string): 
 export {
   buildFrameImageFolder,
   buildProjectImageFolder,
+  deleteUnreferencedProjectImages,
   deleteProjectImages,
-  sweepFrameImages,
+  sweepProjectImages,
 } from './projectImageStorage'

@@ -20,13 +20,14 @@ vi.mock('./contentHash', () => ({
 }))
 
 vi.mock('./projectGateway', () => ({
-  upsertProject: vi.fn(async () => ({ id: 'p1' })),
-  upsertFrame: vi.fn(async () => ({ id: 'f1' })),
+  saveProjectSnapshot: vi.fn(async (input: { revision: number }) => input.revision),
   uploadProjectImage: vi.fn(async () => 'created'),
   deleteProjectImage: vi.fn(async () => undefined),
+  deleteUnreferencedProjectImages: vi.fn(
+    async (_client: unknown, _projectId: string, paths: string[]) => paths,
+  ),
   deleteProjectImages: vi.fn(async () => undefined),
-  sweepFrameImages: vi.fn(async () => undefined),
-  deleteFrame: vi.fn(async () => undefined),
+  sweepProjectImages: vi.fn(async () => undefined),
   deleteProject: vi.fn(async () => undefined),
   downloadProjectImage: vi.fn(),
   getProjectWithFrames: vi.fn(),
@@ -134,16 +135,33 @@ describe('projectSync', () => {
     expect(idb.enqueueWrite).not.toHaveBeenCalled()
   })
 
-  it('queues project metadata and frames for authenticated saves', async () => {
+  it('queues one complete snapshot for authenticated saves', async () => {
     const idb = await import('./idb')
     await queueWorkspaceSave(USER_ID, createProjectWorkspace())
 
-    expect(idb.enqueueWrite).toHaveBeenCalled()
+    expect(idb.enqueueWrite).toHaveBeenCalledTimes(1)
+    expect(idb.enqueueWrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'save-project-snapshot',
+        payload: expect.objectContaining({
+          expectedRevision: null,
+          revision: 2,
+          frames: [
+            expect.objectContaining({
+              id: FRAME_ID,
+              frameOrder: 0,
+              imagePath: IMAGE_PATH,
+            }),
+          ],
+        }),
+      }),
+    )
     expect(idb.putBlob).toHaveBeenCalled()
   })
 
-  it('queues deletes for removed frames before upserts', async () => {
+  it('represents frame deletion by omission from the next snapshot', async () => {
     const idb = await import('./idb')
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
     const workspace: Workspace = {
       ...createEmptySketch(),
       kind: 'project',
@@ -154,20 +172,123 @@ describe('projectSync', () => {
       frames: [],
     }
 
-    await queueWorkspaceSave(USER_ID, workspace, [
-      {
-        id: FRAME_ID,
-        imagePath: 'user/project/frame/hash.webp',
-      },
-    ])
+    await queueWorkspaceSave(USER_ID, workspace)
 
     expect(idb.enqueueWrite).toHaveBeenCalledWith(
       expect.objectContaining({
-        kind: 'delete-frame',
+        kind: 'save-project-snapshot',
         payload: expect.objectContaining({
-          frameId: FRAME_ID,
+          expectedRevision: 2,
+          revision: 3,
+          frames: [],
         }),
       }),
+    )
+  })
+
+  it('queues frame swaps with their final unique ordering', async () => {
+    const idb = await import('./idb')
+    const secondId = '44444444-4444-4444-4444-444444444444'
+    const workspace = createProjectWorkspace()
+    const first = workspace.frames[0]
+    workspace.frames = [
+      {
+        ...first,
+        id: secondId,
+        order: 0,
+        file: new File([new Uint8Array([4])], 'second.webp', { type: 'image/webp' }),
+      },
+      { ...first, order: 1 },
+    ]
+
+    await queueWorkspaceSave(USER_ID, workspace)
+
+    const queue = (
+      idb as unknown as {
+        getTestQueue: () => Array<{
+          payload: { frames: Array<{ id: string; frameOrder: number }> }
+        }>
+      }
+    ).getTestQueue()
+    expect(queue[0]?.payload.frames.map(({ id, frameOrder }) => [id, frameOrder])).toEqual([
+      [secondId, 0],
+      [FRAME_ID, 1],
+    ])
+  })
+
+  it('serializes concurrent local saves with chained expected revisions', async () => {
+    const first = createProjectWorkspace()
+    const second = {
+      ...first,
+      revision: 3,
+      globalSettings: { ...first.globalSettings, showBezel: false },
+    }
+    await queueWorkspaceSave(USER_ID, first)
+    await queueWorkspaceSave(USER_ID, second)
+
+    startProjectSync({} as never, USER_ID)
+    await waitForFlush()
+
+    const snapshots = vi.mocked(gateway.saveProjectSnapshot).mock.calls.map((call) => call[1])
+    expect(snapshots.map(({ expectedRevision, revision }) => [expectedRevision, revision])).toEqual(
+      [
+        [null, 2],
+        [2, 3],
+      ],
+    )
+  })
+
+  it('replays each queued snapshot with its own immutable image blob', async () => {
+    const first = createProjectWorkspace()
+    const second = createProjectWorkspace()
+    second.revision = 3
+    second.frames[0] = {
+      ...second.frames[0],
+      file: new File([new Uint8Array([9])], 'replacement.webp', { type: 'image/webp' }),
+      image: {
+        contentType: 'image/webp',
+        byteSize: 1,
+        contentHash: 'def456',
+      },
+    }
+    await queueWorkspaceSave(USER_ID, first)
+    await queueWorkspaceSave(USER_ID, second)
+
+    startProjectSync({} as never, USER_ID)
+    await waitForFlush()
+
+    expect(
+      vi.mocked(gateway.uploadProjectImage).mock.calls.map(([, path, blob]) => [path, blob.size]),
+    ).toEqual([
+      [IMAGE_PATH, 3],
+      [buildProjectImagePath(USER_ID, PROJECT_ID, FRAME_ID, 'def456'), 1],
+    ])
+  })
+
+  it('compensates created objects when a later upload fails before the RPC', async () => {
+    const secondId = '44444444-4444-4444-4444-444444444444'
+    const workspace = createProjectWorkspace()
+    workspace.frames.push({
+      ...workspace.frames[0],
+      id: secondId,
+      order: 1,
+      file: new File([new Uint8Array([4])], 'second.webp', { type: 'image/webp' }),
+    })
+    vi.mocked(gateway.uploadProjectImage)
+      .mockResolvedValueOnce('created')
+      .mockRejectedValueOnce(new Error('second upload failed'))
+    await startAndSettleInitialFlush()
+    await queueWorkspaceSave(USER_ID, workspace)
+
+    await expect(flushProjectSync()).rejects.toMatchObject({
+      kind: SyncFailureKind.Error,
+    })
+
+    expect(gateway.saveProjectSnapshot).not.toHaveBeenCalled()
+    expect(gateway.deleteUnreferencedProjectImages).toHaveBeenCalledWith(
+      expect.anything(),
+      PROJECT_ID,
+      [IMAGE_PATH],
     )
   })
 
@@ -182,9 +303,8 @@ describe('projectSync', () => {
 
     await waitForFlush()
 
-    expect(gateway.upsertProject).toHaveBeenCalled()
     expect(gateway.uploadProjectImage).toHaveBeenCalled()
-    expect(gateway.upsertFrame).toHaveBeenCalled()
+    expect(gateway.saveProjectSnapshot).toHaveBeenCalledTimes(1)
     expect(idb.dequeueWrite).toHaveBeenCalled()
     expect(statuses).toContain(SyncStatus.Synced)
   })
@@ -195,11 +315,11 @@ describe('projectSync', () => {
     await startAndSettleInitialFlush((status, message) => {
       statuses.push({ status, message })
     })
-    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new Error('database unavailable'))
+    vi.mocked(gateway.saveProjectSnapshot).mockRejectedValueOnce(new Error('database unavailable'))
     const onQueued = vi.fn()
 
     await expect(
-      syncWorkspace(USER_ID, createProjectWorkspace(), [], (queued) => {
+      syncWorkspace(USER_ID, createProjectWorkspace(), (queued) => {
         onQueued(queued)
       }),
     ).rejects.toMatchObject({
@@ -209,7 +329,7 @@ describe('projectSync', () => {
 
     const queue = (idb as unknown as { getTestQueue: () => Array<{ kind: string }> }).getTestQueue()
     expect(onQueued).toHaveBeenCalledWith(expect.objectContaining({ revision: 2 }))
-    expect(queue.map((item) => item.kind)).toEqual(['upsert-project', 'upsert-frame'])
+    expect(queue.map((item) => item.kind)).toEqual(['save-project-snapshot'])
     expect(statuses.at(-1)).toEqual({
       status: SyncStatus.Error,
       message: 'database unavailable',
@@ -220,40 +340,56 @@ describe('projectSync', () => {
     expect(statuses.at(-1)?.status).toBe(SyncStatus.Synced)
   })
 
-  it('keeps frame metadata queued after a partial upload failure and retries safely', async () => {
+  it('compensates an RPC failure and retries the same snapshot idempotently', async () => {
     const idb = await import('./idb')
     await startAndSettleInitialFlush()
     await queueWorkspaceSave(USER_ID, createProjectWorkspace())
-    vi.mocked(gateway.upsertFrame).mockRejectedValueOnce(new Error('metadata write failed'))
+    vi.mocked(gateway.saveProjectSnapshot).mockRejectedValueOnce(
+      new Error('metadata response was lost'),
+    )
 
     await expect(flushProjectSync()).rejects.toBeInstanceOf(ProjectSyncError)
 
-    const queue = (idb as unknown as { getTestQueue: () => Array<{ kind: string }> }).getTestQueue()
-    expect(queue.map((item) => item.kind)).toEqual(['upsert-frame'])
-    expect(gateway.deleteProjectImage).toHaveBeenCalledWith(expect.anything(), IMAGE_PATH)
+    const queue = (
+      idb as unknown as {
+        getTestQueue: () => Array<{ id: string; kind: string }>
+      }
+    ).getTestQueue()
+    const snapshotId = queue[0]?.id
+    expect(queue.map((item) => item.kind)).toEqual(['save-project-snapshot'])
+    expect(gateway.deleteUnreferencedProjectImages).toHaveBeenCalledWith(
+      expect.anything(),
+      PROJECT_ID,
+      [IMAGE_PATH],
+    )
 
     await expect(flushProjectSync()).resolves.toBeUndefined()
     expect(queue).toHaveLength(0)
     expect(gateway.uploadProjectImage).toHaveBeenCalledTimes(2)
-    expect(gateway.upsertFrame).toHaveBeenCalledTimes(2)
+    expect(gateway.saveProjectSnapshot).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(gateway.saveProjectSnapshot).mock.calls[0]?.[1].snapshotId).toBe(snapshotId)
+    expect(vi.mocked(gateway.saveProjectSnapshot).mock.calls[1]?.[1].snapshotId).toBe(snapshotId)
   })
 
-  it('reports conflicts without preventing a later serialized flush', async () => {
+  it('reports a stale-revision conflict and retains the snapshot', async () => {
+    const idb = await import('./idb')
     await startAndSettleInitialFlush()
     await queueWorkspaceSave(USER_ID, createProjectWorkspace())
-    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new Error('revision conflict'))
+    vi.mocked(gateway.saveProjectSnapshot).mockRejectedValueOnce(
+      new ProjectSyncError(SyncFailureKind.Conflict, 'revision conflict'),
+    )
 
     await expect(flushProjectSync()).rejects.toMatchObject({
       kind: SyncFailureKind.Conflict,
     })
-    await expect(flushProjectSync()).resolves.toBeUndefined()
+    expect((idb as unknown as { getTestQueue: () => unknown[] }).getTestQueue()).toHaveLength(1)
   })
 
   it('classifies timeout failures while retaining the queued write', async () => {
     const idb = await import('./idb')
     await startAndSettleInitialFlush()
     await queueWorkspaceSave(USER_ID, createProjectWorkspace())
-    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new Error('request timed out'))
+    vi.mocked(gateway.saveProjectSnapshot).mockRejectedValueOnce(new Error('request timed out'))
 
     await expect(flushProjectSync()).rejects.toMatchObject({
       kind: SyncFailureKind.Timeout,
@@ -261,7 +397,7 @@ describe('projectSync', () => {
     })
 
     const queue = (idb as unknown as { getTestQueue: () => unknown[] }).getTestQueue()
-    expect(queue).toHaveLength(2)
+    expect(queue).toHaveLength(1)
   })
 
   it('classifies offline failures while retaining the queued write', async () => {
@@ -269,7 +405,7 @@ describe('projectSync', () => {
     await startAndSettleInitialFlush()
     await queueWorkspaceSave(USER_ID, createProjectWorkspace())
     vi.stubGlobal('navigator', { onLine: false })
-    vi.mocked(gateway.upsertProject).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    vi.mocked(gateway.saveProjectSnapshot).mockRejectedValueOnce(new TypeError('Failed to fetch'))
 
     await expect(flushProjectSync()).rejects.toMatchObject({
       kind: SyncFailureKind.Offline,
@@ -277,7 +413,7 @@ describe('projectSync', () => {
     })
 
     const queue = (idb as unknown as { getTestQueue: () => unknown[] }).getTestQueue()
-    expect(queue).toHaveLength(2)
+    expect(queue).toHaveLength(1)
   })
 
   it('skips image upload when the frame is already stored at the content-hash path', async () => {
@@ -296,7 +432,7 @@ describe('projectSync', () => {
     await waitForFlush()
 
     expect(gateway.uploadProjectImage).not.toHaveBeenCalled()
-    expect(gateway.upsertFrame).toHaveBeenCalled()
+    expect(gateway.saveProjectSnapshot).toHaveBeenCalled()
     expect(gateway.deleteProjectImage).not.toHaveBeenCalled()
   })
 
@@ -314,22 +450,16 @@ describe('projectSync', () => {
     await waitForFlush()
 
     expect(gateway.uploadProjectImage).toHaveBeenCalledTimes(1)
-    expect(gateway.upsertFrame).toHaveBeenCalledTimes(2)
+    expect(gateway.saveProjectSnapshot).toHaveBeenCalledTimes(2)
   })
 
-  it('sweeps unused frame images after a successful upsert', async () => {
+  it('sweeps unused project images after a successful snapshot', async () => {
     await queueWorkspaceSave(USER_ID, createProjectWorkspace())
 
     startProjectSync({} as never, USER_ID)
     await waitForFlush()
 
-    expect(gateway.sweepFrameImages).toHaveBeenCalledWith(
-      expect.anything(),
-      USER_ID,
-      PROJECT_ID,
-      FRAME_ID,
-      IMAGE_PATH,
-    )
+    expect(gateway.sweepProjectImages).toHaveBeenCalledWith(expect.anything(), USER_ID, PROJECT_ID)
   })
 
   it('queues project deletes and removes storage under the project prefix', async () => {

@@ -1,15 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { QueuedProjectWrite } from './idb'
+import type { QueuedProjectSnapshotWrite, QueuedProjectWrite } from './idb'
 import { getBlob } from './idb'
 import {
-  deleteFrame,
   deleteProject,
   deleteProjectImage,
   deleteProjectImages,
-  sweepFrameImages,
+  deleteUnreferencedProjectImages,
+  saveProjectSnapshot,
+  sweepProjectImages,
   uploadProjectImage,
-  upsertFrame,
-  upsertProject,
 } from './projectGateway'
 
 const uploadedImagePaths = new Set<string>()
@@ -46,88 +45,76 @@ export const forgetUploadedPath = (imagePath: string) => {
   uploadedImagePaths.delete(imagePath)
 }
 
+const uploadSnapshotImages = async (
+  client: SupabaseClient,
+  item: QueuedProjectSnapshotWrite,
+  createdPaths: string[],
+): Promise<void> => {
+  for (const frame of item.payload.frames) {
+    const skipUpload = !frame.needsImageUpload || hasUploadedPath(item.userId, frame.imagePath)
+    if (!skipUpload) {
+      const blob = await getBlob(frame.blobKey)
+      if (!blob) {
+        throw new Error('Missing local blob for frame upload')
+      }
+      const result = await uploadProjectImage(client, frame.imagePath, blob)
+      if (result === 'created') {
+        createdPaths.push(frame.imagePath)
+      }
+    }
+    rememberUploadedPath(item.userId, frame.imagePath)
+  }
+}
+
 export const processQueuedWrite = async (
   client: SupabaseClient,
   item: QueuedProjectWrite,
 ): Promise<void> => {
   switch (item.kind) {
-    case 'upsert-project': {
+    case 'save-project-snapshot': {
       const payload = item.payload
-      await upsertProject(client, {
-        id: String(payload.id),
-        userId: item.userId,
-        name: String(payload.name),
-        revision: Number(payload.revision),
-        globalSettings: payload.globalSettings as Record<string, unknown>,
-        clientUpdatedAt: String(payload.clientUpdatedAt),
-      })
-      break
-    }
-    case 'upsert-frame': {
-      const payload = item.payload
-      const imagePath = String(payload.imagePath)
-      const frameId = String(payload.id)
-      const projectId = String(payload.projectId)
-      const skipUpload =
-        payload.needsImageUpload === false || hasUploadedPath(item.userId, imagePath)
-      let createdObject = false
-
-      if (!skipUpload) {
-        const key = String(payload.blobKey)
-        const blob = await getBlob(key)
-        if (!blob) {
-          throw new Error('Missing local blob for frame upload')
-        }
-        const result = await uploadProjectImage(client, imagePath, blob)
-        createdObject = result === 'created'
-      }
-
-      rememberUploadedPath(item.userId, imagePath)
+      const createdPaths: string[] = []
 
       try {
-        await upsertFrame(client, {
-          id: frameId,
-          userId: item.userId,
-          projectId,
-          frameOrder: Number(payload.frameOrder),
-          settings: payload.settings as Record<string, unknown>,
-          imagePath,
-          imageContentType: 'image/webp',
-          imageByteSize: Number(payload.imageByteSize),
-          imageWidth: typeof payload.imageWidth === 'number' ? payload.imageWidth : undefined,
-          imageHeight: typeof payload.imageHeight === 'number' ? payload.imageHeight : undefined,
-          imageContentHash:
-            typeof payload.imageContentHash === 'string' ? payload.imageContentHash : undefined,
+        await uploadSnapshotImages(client, item, createdPaths)
+
+        await saveProjectSnapshot(client, {
+          projectId: item.projectId,
+          expectedRevision: payload.expectedRevision,
+          snapshotId: item.id,
+          name: payload.name,
+          revision: payload.revision,
+          globalSettings: payload.globalSettings,
+          clientUpdatedAt: payload.clientUpdatedAt,
+          frames: payload.frames,
         })
-        await sweepFrameImages(client, item.userId, projectId, frameId, imagePath).catch(
-          () => undefined,
-        )
+        await sweepProjectImages(client, item.userId, item.projectId).catch(() => undefined)
       } catch (error) {
-        if (createdObject) {
-          await deleteProjectImage(client, imagePath).catch(() => undefined)
-          forgetUploadedPath(imagePath)
+        if (createdPaths.length > 0) {
+          const removed = await deleteUnreferencedProjectImages(
+            client,
+            item.projectId,
+            createdPaths,
+          ).catch(() => [])
+          for (const path of removed) {
+            forgetUploadedPath(path)
+          }
         }
         throw error
       }
       break
     }
-    case 'delete-frame': {
-      const frameId = String(item.payload.frameId)
-      await deleteFrame(client, frameId)
-      await sweepFrameImages(client, item.userId, item.projectId, frameId).catch(() => undefined)
-      break
-    }
     case 'delete-project': {
-      const projectId = String(item.payload.projectId)
+      const projectId = item.payload.projectId
       await deleteProject(client, projectId)
       await deleteProjectImages(client, item.userId, projectId).catch(() => undefined)
       break
     }
     case 'delete-object': {
-      await deleteProjectImage(client, String(item.payload.imagePath))
+      await deleteProjectImage(client, item.payload.imagePath)
       break
     }
     default:
-      throw new Error(`Unknown queue kind: ${item.kind}`)
+      throw new Error('Unknown queue kind')
   }
 }

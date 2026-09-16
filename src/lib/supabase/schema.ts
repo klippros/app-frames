@@ -20,6 +20,7 @@ export interface ProjectRow {
   created_at: string
   updated_at: string
   client_updated_at: string
+  last_snapshot_id: string | null
 }
 
 export interface ProjectFrameRow {
