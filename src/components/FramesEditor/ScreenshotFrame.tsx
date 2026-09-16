@@ -2,12 +2,12 @@ import { Box, HStack } from '@chakra-ui/react'
 import { faImage, faTextHeight, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useEffect, useRef, useState } from 'react'
+import { previewFrameMaxWidth, toolbarControlSize } from '../../layout'
 import type { ExportFormat, TitlePosition } from '../../types'
 import type { GradientConfig } from '../../utils/featureGraphicConfig'
 import { DeleteFrameDialog } from '../DeleteFrameDialog/DeleteFrameDialog'
 import { FrameCanvas } from '../FrameCanvas'
 import { ToolbarIconButton } from '../ToolbarIconButton'
-import { toolbarControlSize } from '../../layout'
 import { FrameTitleOverlay } from './FrameTitleOverlay'
 
 const frameActionsRightOffset = `calc(${toolbarControlSize} / 2 + var(--chakra-spacing-2))`
@@ -97,72 +97,81 @@ export const ScreenshotFrame = ({
   }
 
   return (
-    <Box flexShrink={0} position="relative">
-      <DeleteFrameDialog
-        open={deleteDialogOpen}
-        fileName={fileName}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={onDelete}
-      />
+    <Box display="flex" flexShrink={0} h="full" alignItems="center">
       <Box
-        ref={previewRef}
-        borderRadius="14px"
-        cursor={isEditing ? 'text' : 'pointer'}
-        overflow="hidden"
+        aspectRatio={`${format.width} / ${format.height}`}
+        flexShrink={0}
+        h="full"
+        maxH={`calc(${previewFrameMaxWidth} * ${format.height} / ${format.width})`}
         position="relative"
-        role="group"
-        onClick={handlePreviewClick}
-        onMouseEnter={() => {
-          setIsHovered(true)
-        }}
-        onMouseLeave={() => {
-          setIsHovered(false)
-        }}
       >
-        <FrameCanvas
-          screenshotUrl={screenshotUrl}
-          format={format}
-          gradientConfig={gradientConfig}
-          showBezel={showBezel}
-          title={title}
-          titlePosition={titlePosition}
+        <DeleteFrameDialog
+          open={deleteDialogOpen}
+          fileName={fileName}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={onDelete}
         />
-        <FrameTitleOverlay
-          title={title}
-          titlePosition={titlePosition}
-          format={format}
-          canvasWidth={canvasWidth}
-          isEditing={isEditing}
-          isHovered={isHovered}
-          onTitleChange={onTitleChange}
-          onEditEnd={handleEditEnd}
-        />
-      </Box>
-      <HStack
-        gap={2}
-        position="absolute"
-        right={frameActionsRightOffset}
-        top={0}
-        transform="translateY(-50%)"
-        zIndex={2}
-      >
-        <ToolbarIconButton aria-label="Toggle title position" onClick={onToggleTitlePosition}>
-          <FontAwesomeIcon icon={faTextHeight} />
-        </ToolbarIconButton>
-        <ToolbarIconButton aria-label="Replace screenshot" onClick={handleReplaceClick}>
-          <FontAwesomeIcon icon={faImage} />
-        </ToolbarIconButton>
-      </HStack>
-      <Box position="absolute" right={0} top={0} transform="translate(50%, -50%)" zIndex={2}>
-        <ToolbarIconButton
-          aria-label="Delete screenshot"
-          tone="destructive"
-          onClick={handleOpenDeleteDialog}
+        <Box
+          ref={previewRef}
+          borderRadius="14px"
+          cursor={isEditing ? 'text' : 'pointer'}
+          h="full"
+          overflow="hidden"
+          position="relative"
+          role="group"
+          onClick={handlePreviewClick}
+          onMouseEnter={() => {
+            setIsHovered(true)
+          }}
+          onMouseLeave={() => {
+            setIsHovered(false)
+          }}
         >
-          <FontAwesomeIcon icon={faTrash} />
-        </ToolbarIconButton>
+          <FrameCanvas
+            screenshotUrl={screenshotUrl}
+            format={format}
+            gradientConfig={gradientConfig}
+            showBezel={showBezel}
+            title={title}
+            titlePosition={titlePosition}
+          />
+          <FrameTitleOverlay
+            title={title}
+            titlePosition={titlePosition}
+            format={format}
+            canvasWidth={canvasWidth}
+            isEditing={isEditing}
+            isHovered={isHovered}
+            onTitleChange={onTitleChange}
+            onEditEnd={handleEditEnd}
+          />
+        </Box>
+        <HStack
+          gap={2}
+          position="absolute"
+          right={frameActionsRightOffset}
+          top={0}
+          transform="translateY(-50%)"
+          zIndex={2}
+        >
+          <ToolbarIconButton aria-label="Toggle title position" onClick={onToggleTitlePosition}>
+            <FontAwesomeIcon icon={faTextHeight} />
+          </ToolbarIconButton>
+          <ToolbarIconButton aria-label="Replace screenshot" onClick={handleReplaceClick}>
+            <FontAwesomeIcon icon={faImage} />
+          </ToolbarIconButton>
+        </HStack>
+        <Box position="absolute" right={0} top={0} transform="translate(50%, -50%)" zIndex={2}>
+          <ToolbarIconButton
+            aria-label="Delete screenshot"
+            tone="destructive"
+            onClick={handleOpenDeleteDialog}
+          >
+            <FontAwesomeIcon icon={faTrash} />
+          </ToolbarIconButton>
+        </Box>
+        <input ref={inputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
       </Box>
-      <input ref={inputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
     </Box>
   )
 }

@@ -68,10 +68,11 @@ export const FrameCanvas = ({
   return (
     <canvas
       ref={canvasRef}
+      width={format.width}
+      height={format.height}
       style={{
-        maxWidth: '320px',
         width: '100%',
-        height: 'auto',
+        height: '100%',
         display: 'block',
       }}
     />
