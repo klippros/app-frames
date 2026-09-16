@@ -16,12 +16,15 @@ export interface ProjectToolbarProps {
   syncStatus: SyncStatus
   syncMessage?: string
   showSaveProject?: boolean
+  saveProjectDisabled?: boolean
+  deleteProjectDisabled?: boolean
   onPlatformChange: (platform: Platform) => void
   onGradientBaseColorChange: (baseColor: string) => void
   onShowBezelChange: (showBezel: boolean) => void
   onAddScreenshots: (screenshots: Screenshot[]) => void
   onExportClick: () => void
   onSaveProjectClick?: () => void
+  onDeleteProjectClick?: () => void
   trailing?: ReactNode
 }
 
@@ -35,12 +38,15 @@ export const ProjectToolbar = ({
   syncStatus,
   syncMessage,
   showSaveProject = false,
+  saveProjectDisabled = false,
+  deleteProjectDisabled = false,
   onPlatformChange,
   onGradientBaseColorChange,
   onShowBezelChange,
   onAddScreenshots,
   onExportClick,
   onSaveProjectClick,
+  onDeleteProjectClick,
   trailing,
 }: ProjectToolbarProps) => (
   <Flex align="center" gap={4} minH={toolbarControlSize} w="full">
@@ -52,6 +58,7 @@ export const ProjectToolbar = ({
       gradientBaseColor={gradientBaseColor}
       showBezel={showBezel}
       showSaveProject={showSaveProject}
+      saveProjectDisabled={saveProjectDisabled}
       onPlatformChange={onPlatformChange}
       onGradientBaseColorChange={onGradientBaseColorChange}
       onShowBezelChange={onShowBezelChange}
@@ -64,6 +71,8 @@ export const ProjectToolbar = ({
         projectName={projectName}
         syncStatus={syncStatus}
         syncMessage={syncMessage}
+        deleteDisabled={deleteProjectDisabled}
+        onDeleteProjectClick={onDeleteProjectClick}
       />
       {trailing}
     </HStack>

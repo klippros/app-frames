@@ -7,23 +7,32 @@ export const usePendingSaveAfterAuth = (
   setPending: (value: boolean) => void,
   openSave: () => void,
   closeSignIn: () => void,
+  atProjectLimit = false,
 ) => {
   const { authStatus } = useAuth()
 
   useEffect(() => {
-    if (pending && authStatus === AuthStatus.Authenticated) {
-      setPending(false)
-      closeSignIn()
-      openSave()
+    if (!pending || authStatus !== AuthStatus.Authenticated) {
+      return
     }
-  }, [authStatus, closeSignIn, openSave, pending, setPending])
+
+    setPending(false)
+    closeSignIn()
+
+    if (atProjectLimit) {
+      return
+    }
+
+    openSave()
+  }, [authStatus, atProjectLimit, closeSignIn, openSave, pending, setPending])
 }
 
-export const useEditorDialogState = () => {
+export const useEditorDialogState = (atProjectLimit = false) => {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [postExportOpen, setPostExportOpen] = useState(false)
   const [signInOpen, setSignInOpen] = useState(false)
+  const [deleteProjectOpen, setDeleteProjectOpen] = useState(false)
   const [pendingSaveAfterAuth, setPendingSaveAfterAuth] = useState(false)
 
   usePendingSaveAfterAuth(
@@ -35,6 +44,7 @@ export const useEditorDialogState = () => {
     () => {
       setSignInOpen(false)
     },
+    atProjectLimit,
   )
 
   return {
@@ -46,6 +56,8 @@ export const useEditorDialogState = () => {
     setPostExportOpen,
     signInOpen,
     setSignInOpen,
+    deleteProjectOpen,
+    setDeleteProjectOpen,
     pendingSaveAfterAuth,
     setPendingSaveAfterAuth,
   }

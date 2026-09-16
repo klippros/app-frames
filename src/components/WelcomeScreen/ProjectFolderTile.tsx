@@ -4,16 +4,24 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 export interface ProjectFolderTileProps {
   name: string
+  disabled?: boolean
+  opening?: boolean
   onClick: () => void
 }
 
-export const ProjectFolderTile = ({ name, onClick }: ProjectFolderTileProps) => (
+export const ProjectFolderTile = ({
+  name,
+  disabled = false,
+  opening = false,
+  onClick,
+}: ProjectFolderTileProps) => (
   <Button
     variant="ghost"
     h="auto"
     p={3}
     borderRadius="12px"
     color="white"
+    disabled={disabled}
     title={name}
     onClick={onClick}
     _hover={{ bg: 'whiteAlpha.100' }}
@@ -32,7 +40,7 @@ export const ProjectFolderTile = ({ name, onClick }: ProjectFolderTileProps) => 
         whiteSpace="nowrap"
         textAlign="center"
       >
-        {name}
+        {opening ? 'Opening…' : name}
       </Text>
     </VStack>
   </Button>

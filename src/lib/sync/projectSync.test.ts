@@ -4,11 +4,31 @@ import { buildProjectImagePath } from '../supabase/schema'
 import * as gateway from './projectGateway'
 import {
   flushProjectSync,
+  queueProjectDelete,
   queueWorkspaceSave,
   startProjectSync,
   stopProjectSync,
   SyncStatus,
 } from './projectSync'
+
+vi.mock('./contentHash', () => ({
+  hashBlob: vi.fn(async () => 'abc123'),
+}))
+
+vi.mock('./projectGateway', () => ({
+  upsertProject: vi.fn(async () => ({ id: 'p1' })),
+  upsertFrame: vi.fn(async () => ({ id: 'f1' })),
+  uploadProjectImage: vi.fn(async () => 'created'),
+  deleteProjectImage: vi.fn(async () => undefined),
+  deleteProjectImages: vi.fn(async () => undefined),
+  sweepFrameImages: vi.fn(async () => undefined),
+  deleteFrame: vi.fn(async () => undefined),
+  deleteProject: vi.fn(async () => undefined),
+  downloadProjectImage: vi.fn(),
+  getProjectWithFrames: vi.fn(),
+  listProjects: vi.fn(async () => []),
+  countProjects: vi.fn(async () => 0),
+}))
 
 vi.mock('./idb', () => {
   const queue: Array<Record<string, unknown>> = []
@@ -34,26 +54,22 @@ vi.mock('./idb', () => {
     deleteBlob: vi.fn(async (key: string) => {
       blobs.delete(key)
     }),
+    deleteBlobsByProjectPrefix: vi.fn(async (userId: string, projectId: string) => {
+      const prefix = `${userId}/${projectId}`
+      for (const key of [...blobs.keys()]) {
+        if (key === prefix || key.startsWith(`${prefix}/`)) {
+          blobs.delete(key)
+        }
+      }
+    }),
     __queue: queue,
     __blobs: blobs,
+    clearTestState: () => {
+      queue.length = 0
+      blobs.clear()
+    },
   }
 })
-
-vi.mock('./contentHash', () => ({
-  hashBlob: vi.fn(async () => 'abc123'),
-}))
-
-vi.mock('./projectGateway', () => ({
-  upsertProject: vi.fn(async () => ({ id: 'p1' })),
-  upsertFrame: vi.fn(async () => ({ id: 'f1' })),
-  uploadProjectImage: vi.fn(async () => 'created'),
-  deleteProjectImage: vi.fn(async () => undefined),
-  deleteFrame: vi.fn(async () => undefined),
-  deleteProject: vi.fn(async () => undefined),
-  downloadProjectImage: vi.fn(),
-  getProjectWithFrames: vi.fn(),
-  listProjects: vi.fn(async () => []),
-}))
 
 const USER_ID = '11111111-1111-1111-1111-111111111111'
 const PROJECT_ID = '22222222-2222-2222-2222-222222222222'
@@ -92,8 +108,7 @@ describe('projectSync', () => {
     stopProjectSync()
     vi.clearAllMocks()
     const idb = await import('./idb')
-    ;(idb as unknown as { __queue: unknown[] }).__queue.length = 0
-    ;(idb as unknown as { __blobs: Map<string, Blob> }).__blobs.clear()
+    ;(idb as unknown as { clearTestState: () => void }).clearTestState()
   })
 
   it('does not queue unnamed sketches', async () => {
@@ -192,5 +207,40 @@ describe('projectSync', () => {
 
     expect(gateway.uploadProjectImage).toHaveBeenCalledTimes(1)
     expect(gateway.upsertFrame).toHaveBeenCalledTimes(2)
+  })
+
+  it('sweeps unused frame images after a successful upsert', async () => {
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
+
+    startProjectSync({} as never, USER_ID)
+    await waitForFlush()
+
+    expect(gateway.sweepFrameImages).toHaveBeenCalledWith(
+      expect.anything(),
+      USER_ID,
+      PROJECT_ID,
+      FRAME_ID,
+      IMAGE_PATH,
+    )
+  })
+
+  it('queues project deletes and removes storage under the project prefix', async () => {
+    const idb = await import('./idb')
+    await queueWorkspaceSave(USER_ID, createProjectWorkspace())
+    await queueProjectDelete(USER_ID, PROJECT_ID)
+
+    expect(idb.deleteBlobsByProjectPrefix).toHaveBeenCalledWith(USER_ID, PROJECT_ID)
+    expect(idb.enqueueWrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'delete-project',
+        payload: expect.objectContaining({ projectId: PROJECT_ID }),
+      }),
+    )
+
+    startProjectSync({} as never, USER_ID)
+    await waitForFlush()
+
+    expect(gateway.deleteProject).toHaveBeenCalledWith(expect.anything(), PROJECT_ID)
+    expect(gateway.deleteProjectImages).toHaveBeenCalledWith(expect.anything(), USER_ID, PROJECT_ID)
   })
 })

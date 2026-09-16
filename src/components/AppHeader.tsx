@@ -19,12 +19,15 @@ export interface AppHeaderProps {
   syncStatus: SyncStatus
   syncMessage?: string
   showSaveProject?: boolean
+  saveProjectDisabled?: boolean
+  deleteProjectDisabled?: boolean
   onPlatformChange: (platform: Platform) => void
   onGradientBaseColorChange: (baseColor: string) => void
   onShowBezelChange: (showBezel: boolean) => void
   onAddScreenshots: (screenshots: Screenshot[]) => void
   onExportClick: () => void
   onSaveProjectClick?: () => void
+  onDeleteProjectClick?: () => void
 }
 
 export const AppHeader = ({
@@ -37,12 +40,15 @@ export const AppHeader = ({
   syncStatus,
   syncMessage,
   showSaveProject = false,
+  saveProjectDisabled = false,
+  deleteProjectDisabled = false,
   onPlatformChange,
   onGradientBaseColorChange,
   onShowBezelChange,
   onAddScreenshots,
   onExportClick,
   onSaveProjectClick,
+  onDeleteProjectClick,
 }: AppHeaderProps) => (
   <ContentContainer>
     <Stack gap={4} py={4}>
@@ -80,12 +86,15 @@ export const AppHeader = ({
         syncStatus={syncStatus}
         syncMessage={syncMessage}
         showSaveProject={showSaveProject}
+        saveProjectDisabled={saveProjectDisabled}
+        deleteProjectDisabled={deleteProjectDisabled}
         onPlatformChange={onPlatformChange}
         onGradientBaseColorChange={onGradientBaseColorChange}
         onShowBezelChange={onShowBezelChange}
         onAddScreenshots={onAddScreenshots}
         onExportClick={onExportClick}
         onSaveProjectClick={onSaveProjectClick}
+        onDeleteProjectClick={onDeleteProjectClick}
       />
     </Stack>
   </ContentContainer>

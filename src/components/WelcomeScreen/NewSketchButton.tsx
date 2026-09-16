@@ -3,19 +3,27 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useRef } from 'react'
 import type { Screenshot } from '../../types'
+import type { ImageNormalizationError } from '../../utils/normalizeImage'
 import { ScreenshotFileInput } from '../ScreenshotFileInput'
 import type { ScreenshotFileInputHandle } from '../ScreenshotFileInput'
 
 export interface NewSketchButtonProps {
   onSelect: (screenshots: Screenshot[]) => void
+  onErrors?: (message: string) => void
 }
 
-export const NewSketchButton = ({ onSelect }: NewSketchButtonProps) => {
+export const NewSketchButton = ({ onSelect, onErrors }: NewSketchButtonProps) => {
   const inputRef = useRef<ScreenshotFileInputHandle>(null)
+
+  const handleErrors = (errors: ImageNormalizationError[]) => {
+    if (errors.length > 0) {
+      onErrors?.(errors[0]?.message ?? 'Could not process screenshots.')
+    }
+  }
 
   return (
     <>
-      <ScreenshotFileInput ref={inputRef} onSelect={onSelect} />
+      <ScreenshotFileInput ref={inputRef} onSelect={onSelect} onErrors={handleErrors} />
       <Button
         variant="ghost"
         h="auto"

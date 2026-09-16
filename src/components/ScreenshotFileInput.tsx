@@ -1,4 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { MAX_FRAMES_PER_PROJECT } from '../lib/supabase/schema'
 import type { Screenshot } from '../types'
 import type { ImageNormalizationError } from '../utils/normalizeImage'
 import { ingestImageFiles } from '../utils/ingestImages'
@@ -9,12 +10,16 @@ export interface ScreenshotFileInputHandle {
 
 export interface ScreenshotFileInputProps {
   existingScreenshotCount?: number
+  maxFrames?: number
   onSelect: (screenshots: Screenshot[]) => void
   onErrors?: (errors: ImageNormalizationError[]) => void
 }
 
 export const ScreenshotFileInput = forwardRef<ScreenshotFileInputHandle, ScreenshotFileInputProps>(
-  ({ existingScreenshotCount = 0, onSelect, onErrors }, ref) => {
+  (
+    { existingScreenshotCount = 0, maxFrames = MAX_FRAMES_PER_PROJECT, onSelect, onErrors },
+    ref,
+  ) => {
     const inputRef = useRef<HTMLInputElement>(null)
 
     useImperativeHandle(ref, () => ({
@@ -32,7 +37,11 @@ export const ScreenshotFileInput = forwardRef<ScreenshotFileInputHandle, Screens
       }
 
       void (async () => {
-        const { screenshots, errors } = await ingestImageFiles(files, existingScreenshotCount)
+        const { screenshots, errors } = await ingestImageFiles(
+          files,
+          existingScreenshotCount,
+          maxFrames,
+        )
 
         if (errors.length > 0) {
           onErrors?.(errors)

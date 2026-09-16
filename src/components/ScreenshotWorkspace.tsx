@@ -1,4 +1,5 @@
 import { Flex } from '@chakra-ui/react'
+import type { ProjectRow } from '../lib/supabase/schema'
 import type { Platform, Screenshot } from '../types'
 import type { GradientConfig } from '../utils/featureGraphicConfig'
 import { FramesEditor } from './FramesEditor/FramesEditor'
@@ -12,7 +13,11 @@ export interface ScreenshotWorkspaceProps {
   showBezel: boolean
   /** True on /sketch or /projects/:id — editor only shows on editing routes. */
   isEditingRoute: boolean
-  projectsListKey?: number
+  projects: ProjectRow[]
+  projectsLoading?: boolean
+  projectsError?: string | null
+  openingProjectId?: string | null
+  screenshotError?: string | null
   onSelect: (screenshots: Screenshot[]) => void
   onReplace: (id: string, file: File) => void
   onDelete: (id: string) => void
@@ -21,6 +26,7 @@ export interface ScreenshotWorkspaceProps {
   onToggleTitlePosition: (id: string) => void
   onOpenProject: (projectId: string) => void
   onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
+  onScreenshotErrors?: (message: string) => void
 }
 
 export const ScreenshotWorkspace = ({
@@ -29,7 +35,11 @@ export const ScreenshotWorkspace = ({
   gradientConfig,
   showBezel,
   isEditingRoute,
-  projectsListKey = 0,
+  projects,
+  projectsLoading = false,
+  projectsError = null,
+  openingProjectId = null,
+  screenshotError = null,
   onSelect,
   onReplace,
   onDelete,
@@ -38,6 +48,7 @@ export const ScreenshotWorkspace = ({
   onToggleTitlePosition,
   onOpenProject,
   onCreateProject,
+  onScreenshotErrors,
 }: ScreenshotWorkspaceProps) => (
   <Flex direction="column" flex="1" minH={0} w="full">
     {isEditingRoute && screenshots.length > 0 ? (
@@ -55,10 +66,15 @@ export const ScreenshotWorkspace = ({
     ) : (
       <MainContent align="start">
         <WelcomeScreen
-          projectsListKey={projectsListKey}
+          projects={projects}
+          projectsLoading={projectsLoading}
+          projectsError={projectsError}
+          openingProjectId={openingProjectId}
+          screenshotError={screenshotError}
           onSelectScreenshots={onSelect}
           onOpenProject={onOpenProject}
           onCreateProject={onCreateProject}
+          onScreenshotErrors={onScreenshotErrors}
         />
       </MainContent>
     )}

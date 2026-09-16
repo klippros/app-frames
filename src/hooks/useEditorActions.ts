@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAuth } from '../hooks/authContext'
+import { PROJECT_LIMIT_MESSAGE } from '../lib/sync/projectGateway'
 import type { Screenshot } from '../types'
 import type { GradientConfig } from '../utils/featureGraphicConfig'
 import { exportAssets } from '../utils/exportFrames'
@@ -12,6 +13,7 @@ export interface UseEditorActionsArgs {
   showBezel: boolean
   isConfigured: boolean
   hasScreenshots: boolean
+  atProjectLimit?: boolean
   promoteToProject: (name: string, ownerId: string, screenshots?: Screenshot[]) => Promise<string>
   openProject: (projectId: string) => void
   allowNextNavigation: () => void
@@ -25,6 +27,7 @@ export const useEditorActions = ({
   showBezel,
   isConfigured,
   hasScreenshots,
+  atProjectLimit = false,
   promoteToProject,
   openProject,
   allowNextNavigation,
@@ -55,11 +58,14 @@ export const useEditorActions = ({
       if (!user) {
         throw new Error('Sign in to save a project.')
       }
+      if (atProjectLimit) {
+        throw new Error(PROJECT_LIMIT_MESSAGE)
+      }
       const projectId = await promoteToProject(name, user.id, nextScreenshots)
       allowNextNavigation()
       openProject(projectId)
     },
-    [allowNextNavigation, openProject, promoteToProject, user],
+    [allowNextNavigation, atProjectLimit, openProject, promoteToProject, user],
   )
 
   const handleOpenProject = useCallback(

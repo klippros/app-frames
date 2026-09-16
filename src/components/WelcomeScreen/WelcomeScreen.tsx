@@ -1,69 +1,38 @@
 import { Button, Flex, Heading, Spinner, Text, VStack } from '@chakra-ui/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../../hooks/authContext'
-import { listProjects } from '../../lib/sync/projectSync'
 import type { ProjectRow } from '../../lib/supabase/schema'
-import { supabaseClient } from '../../lib/supabase/client'
 import type { Screenshot } from '../../types'
 import { AuthStatus } from '../../types/auth'
-import { CreateProjectDialog } from '../CreateProjectDialog/CreateProjectDialog'
 import { ScreenshotPicker } from '../ScreenshotPicker'
 import { SignInDialog } from '../SignInDialog/SignInDialog'
-import { NewProjectFolderButton } from './NewProjectFolderButton'
-import { NewSketchButton } from './NewSketchButton'
-import { ProjectFolderTile } from './ProjectFolderTile'
+import { WelcomeProjectGrid } from './WelcomeProjectGrid'
 
 export interface WelcomeScreenProps {
-  projectsListKey?: number
+  projects: ProjectRow[]
+  projectsLoading?: boolean
+  projectsError?: string | null
+  openingProjectId?: string | null
   onSelectScreenshots: (screenshots: Screenshot[]) => void
   onOpenProject: (projectId: string) => void
   onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
+  onScreenshotErrors?: (message: string) => void
+  screenshotError?: string | null
 }
 
 export const WelcomeScreen = ({
-  projectsListKey = 0,
+  projects,
+  projectsLoading = false,
+  projectsError = null,
+  openingProjectId = null,
   onSelectScreenshots,
   onOpenProject,
   onCreateProject,
+  onScreenshotErrors,
+  screenshotError = null,
 }: WelcomeScreenProps) => {
   const { authStatus, isConfigured } = useAuth()
-  const [projects, setProjects] = useState<ProjectRow[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [signInOpen, setSignInOpen] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
-
-  useEffect(() => {
-    if (!isConfigured || authStatus !== AuthStatus.Authenticated || !supabaseClient) {
-      setProjects([])
-      return undefined
-    }
-
-    let cancelled = false
-
-    void (async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const rows = await listProjects(supabaseClient)
-        if (!cancelled) {
-          setProjects(rows)
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Could not load projects.')
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [authStatus, isConfigured, projectsListKey])
 
   if (!isConfigured || authStatus !== AuthStatus.Authenticated) {
     return (
@@ -79,7 +48,12 @@ export const WelcomeScreen = ({
               </Text>
             </>
           )}
-          <ScreenshotPicker onSelect={onSelectScreenshots} />
+          <ScreenshotPicker onSelect={onSelectScreenshots} onErrors={onScreenshotErrors} />
+          {screenshotError !== null && (
+            <Text fontSize="sm" color="red.300" textAlign="center">
+              {screenshotError}
+            </Text>
+          )}
           {isConfigured && authStatus === AuthStatus.Anonymous && (
             <Button
               variant="cancel"
@@ -98,37 +72,27 @@ export const WelcomeScreen = ({
 
   return (
     <VStack gap={4} align="stretch" w="full" pt={4}>
-      {loading && <Spinner color="white" alignSelf="center" />}
-      {error !== null && (
+      {projectsLoading && <Spinner color="white" alignSelf="center" />}
+      {projectsError !== null && (
         <Text fontSize="sm" color="red.300">
-          {error}
+          {projectsError}
         </Text>
       )}
-      {!loading && (
-        <Flex wrap="wrap" gap={2} justify="flex-start">
-          {projects.map((project) => (
-            <ProjectFolderTile
-              key={project.id}
-              name={project.name}
-              onClick={() => {
-                onOpenProject(project.id)
-              }}
-            />
-          ))}
-          <NewProjectFolderButton
-            onClick={() => {
-              setCreateOpen(true)
-            }}
-          />
-          <NewSketchButton onSelect={onSelectScreenshots} />
-        </Flex>
+      {screenshotError !== null && (
+        <Text fontSize="sm" color="red.300">
+          {screenshotError}
+        </Text>
       )}
-
-      <CreateProjectDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onConfirm={onCreateProject}
-      />
+      {!projectsLoading && (
+        <WelcomeProjectGrid
+          projects={projects}
+          openingProjectId={openingProjectId}
+          onSelectScreenshots={onSelectScreenshots}
+          onOpenProject={onOpenProject}
+          onCreateProject={onCreateProject}
+          onScreenshotErrors={onScreenshotErrors}
+        />
+      )}
     </VStack>
   )
 }

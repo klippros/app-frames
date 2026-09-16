@@ -1,5 +1,10 @@
-import { Box, HStack, Text, Tooltip, VStack } from '@chakra-ui/react'
-import { faCloud, faCloudArrowUp, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
+import { Box, HStack, IconButton, Text, Tooltip, VStack } from '@chakra-ui/react'
+import {
+  faCloud,
+  faCloudArrowUp,
+  faExclamationTriangle,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { SyncStatus } from '../lib/sync/projectSync'
@@ -8,6 +13,8 @@ export interface ProjectHeaderMetaProps {
   projectName: string | null
   syncStatus: SyncStatus
   syncMessage?: string
+  deleteDisabled?: boolean
+  onDeleteProjectClick?: () => void
 }
 
 interface SyncPresentation {
@@ -57,6 +64,8 @@ export const ProjectHeaderMeta = ({
   projectName,
   syncStatus,
   syncMessage,
+  deleteDisabled = false,
+  onDeleteProjectClick,
 }: ProjectHeaderMetaProps) => {
   if (projectName === null) {
     return null
@@ -107,6 +116,22 @@ export const ProjectHeaderMeta = ({
             </Tooltip.Content>
           </Tooltip.Positioner>
         </Tooltip.Root>
+      )}
+      {onDeleteProjectClick !== undefined && (
+        <IconButton
+          aria-label={`Delete ${projectName}`}
+          size="xs"
+          variant="ghost"
+          color="whiteAlpha.700"
+          minW="1.5rem"
+          h="1.5rem"
+          borderRadius="full"
+          disabled={deleteDisabled}
+          onClick={onDeleteProjectClick}
+          _hover={{ bg: 'whiteAlpha.200', color: 'red.300' }}
+        >
+          <FontAwesomeIcon icon={faTrash} />
+        </IconButton>
       )}
     </HStack>
   )

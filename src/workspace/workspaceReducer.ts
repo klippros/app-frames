@@ -1,4 +1,5 @@
 import type { Platform, Screenshot, TitlePosition } from '../types'
+import { MAX_FRAMES_PER_PROJECT } from '../lib/supabase/schema'
 import type { Workspace, WorkspaceFrame, WorkspaceImageMeta } from './types'
 import { createEmptySketch } from './types'
 
@@ -44,16 +45,25 @@ export const workspaceReducer = (state: Workspace, action: WorkspaceAction): Wor
     }
     case 'SELECT_FRAMES': {
       revokeFrameUrls(state.frames)
+      const selected = action.frames.slice(0, MAX_FRAMES_PER_PROJECT)
+      revokeFrameUrls(action.frames.slice(MAX_FRAMES_PER_PROJECT))
       return bumpRevision({
         ...state,
-        frames: renumberOrders(action.frames),
+        frames: renumberOrders(selected),
       })
     }
-    case 'ADD_FRAMES':
+    case 'ADD_FRAMES': {
+      const remaining = Math.max(0, MAX_FRAMES_PER_PROJECT - state.frames.length)
+      const accepted = action.frames.slice(0, remaining)
+      revokeFrameUrls(action.frames.slice(remaining))
+      if (accepted.length === 0) {
+        return state
+      }
       return bumpRevision({
         ...state,
-        frames: renumberOrders([...state.frames, ...action.frames]),
+        frames: renumberOrders([...state.frames, ...accepted]),
       })
+    }
     case 'REPLACE_FRAME':
       return bumpRevision({
         ...state,
@@ -152,20 +162,21 @@ export const workspaceReducer = (state: Workspace, action: WorkspaceAction): Wor
         syncedRevision: null,
       }
     case 'MARK_SYNCED': {
-      const frameImages = action.frameImages
+      const { frameImages } = action
       return {
         ...state,
         syncedRevision: action.revision,
-        frames: frameImages
-          ? state.frames.map((frame) => {
-              const image = frameImages[frame.id]
-              if (!image || frame.file.size !== image.byteSize) {
-                return frame
-              }
+        frames:
+          frameImages === undefined
+            ? state.frames
+            : state.frames.map((frame) => {
+                const image = frameImages[frame.id]
+                if (image === undefined || frame.file.size !== image.byteSize) {
+                  return frame
+                }
 
-              return { ...frame, image }
-            })
-          : state.frames,
+                return { ...frame, image }
+              }),
       }
     }
     default: {

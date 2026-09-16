@@ -95,6 +95,45 @@ export const deleteBlob = async (key: string): Promise<void> => {
   })
 }
 
+/** Delete IndexedDB blobs whose key starts with `{userId}/{projectId}`. */
+export const deleteBlobsByProjectPrefix = async (
+  userId: string,
+  projectId: string,
+): Promise<void> => {
+  const prefix = `${userId}/${projectId}`
+  const db = await openDb()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_BLOBS, 'readwrite')
+    const store = tx.objectStore(STORE_BLOBS)
+    const index = store.index('byUser')
+    const request = index.openCursor(IDBKeyRange.only(userId))
+    request.onsuccess = () => {
+      const cursor = request.result
+      if (!cursor) {
+        return
+      }
+      const row = cursor.value as { key?: unknown }
+      let key = ''
+      if (typeof row.key === 'string') {
+        key = row.key
+      } else if (typeof cursor.primaryKey === 'string') {
+        key = cursor.primaryKey
+      }
+      if (key === prefix || key.startsWith(`${prefix}/`)) {
+        cursor.delete()
+      }
+      cursor.continue()
+    }
+    tx.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    tx.onerror = () => {
+      reject(tx.error ?? new Error('Failed to delete project blobs'))
+    }
+  })
+}
+
 export const enqueueWrite = async (item: QueuedProjectWrite): Promise<void> => {
   await withStore(STORE_QUEUE, 'readwrite', (store) => {
     store.put(item)

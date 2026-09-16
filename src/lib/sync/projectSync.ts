@@ -4,22 +4,19 @@ import { buildProjectImagePath } from '../supabase/schema'
 import { hashBlob } from './contentHash'
 import {
   deleteBlob,
+  deleteBlobsByProjectPrefix,
   dequeueWrite,
   enqueueWrite,
-  getBlob,
   listQueueForUser,
   putBlob,
-  type QueuedProjectWrite,
 } from './idb'
+import { listProjects } from './projectGateway'
 import {
-  deleteFrame,
-  deleteProject,
-  deleteProjectImage,
-  listProjects,
-  uploadProjectImage,
-  upsertFrame,
-  upsertProject,
-} from './projectGateway'
+  clearUploadedImagePaths,
+  ensureUploadedPathsUser,
+  hasUploadedPath,
+  processQueuedWrite,
+} from './processQueuedWrite'
 
 export const SyncStatus = {
   Idle: 'idle',
@@ -37,8 +34,6 @@ let flushChain: Promise<void> = Promise.resolve()
 let activeUserId: string | null = null
 let activeClient: SupabaseClient | null = null
 let statusListener: StatusListener | null = null
-const uploadedImagePaths = new Set<string>()
-let uploadedPathsUserId: string | null = null
 
 const setStatus = (status: SyncStatus, message?: string) => {
   statusListener?.(status, message)
@@ -49,10 +44,7 @@ export const startProjectSync = (
   userId: string,
   onStatus?: StatusListener,
 ) => {
-  if (uploadedPathsUserId !== userId) {
-    uploadedImagePaths.clear()
-    uploadedPathsUserId = userId
-  }
+  ensureUploadedPathsUser(userId)
   activeClient = client
   activeUserId = userId
   statusListener = onStatus ?? null
@@ -63,8 +55,7 @@ export const stopProjectSync = () => {
   activeClient = null
   activeUserId = null
   statusListener = null
-  uploadedImagePaths.clear()
-  uploadedPathsUserId = null
+  clearUploadedImagePaths()
 }
 
 const blobKey = (userId: string, projectId: string, frameId: string) =>
@@ -148,7 +139,7 @@ export const queueFrameSave = async (
       imageHeight: frame.image?.height,
       imageContentHash: contentHash,
       blobKey: key,
-      needsImageUpload: !frame.image?.storagePath && !uploadedImagePaths.has(imagePath),
+      needsImageUpload: !frame.image?.storagePath && !hasUploadedPath(userId, imagePath),
     },
   })
 
@@ -184,80 +175,24 @@ export const queueFrameDelete = async (
   })
 }
 
-const processItem = async (client: SupabaseClient, item: QueuedProjectWrite): Promise<void> => {
-  switch (item.kind) {
-    case 'upsert-project': {
-      const payload = item.payload
-      await upsertProject(client, {
-        id: String(payload.id),
-        userId: item.userId,
-        name: String(payload.name),
-        revision: Number(payload.revision),
-        globalSettings: payload.globalSettings as Record<string, unknown>,
-        clientUpdatedAt: String(payload.clientUpdatedAt),
-      })
-      break
+export const queueProjectDelete = async (userId: string, projectId: string): Promise<void> => {
+  const pending = await listQueueForUser(userId)
+  for (const item of pending) {
+    if (item.projectId === projectId) {
+      await dequeueWrite(item.id)
     }
-    case 'upsert-frame': {
-      const payload = item.payload
-      const imagePath = String(payload.imagePath)
-      const skipUpload = payload.needsImageUpload === false || uploadedImagePaths.has(imagePath)
-      let createdObject = false
-
-      if (!skipUpload) {
-        const key = String(payload.blobKey)
-        const blob = await getBlob(key)
-        if (!blob) {
-          throw new Error('Missing local blob for frame upload')
-        }
-        const result = await uploadProjectImage(client, imagePath, blob)
-        createdObject = result === 'created'
-      }
-
-      uploadedImagePaths.add(imagePath)
-
-      try {
-        await upsertFrame(client, {
-          id: String(payload.id),
-          userId: item.userId,
-          projectId: String(payload.projectId),
-          frameOrder: Number(payload.frameOrder),
-          settings: payload.settings as Record<string, unknown>,
-          imagePath,
-          imageContentType: 'image/webp',
-          imageByteSize: Number(payload.imageByteSize),
-          imageWidth: typeof payload.imageWidth === 'number' ? payload.imageWidth : undefined,
-          imageHeight: typeof payload.imageHeight === 'number' ? payload.imageHeight : undefined,
-          imageContentHash:
-            typeof payload.imageContentHash === 'string' ? payload.imageContentHash : undefined,
-        })
-      } catch (error) {
-        if (createdObject) {
-          await deleteProjectImage(client, imagePath).catch(() => undefined)
-          uploadedImagePaths.delete(imagePath)
-        }
-        throw error
-      }
-      break
-    }
-    case 'delete-frame': {
-      await deleteFrame(client, String(item.payload.frameId))
-      if (typeof item.payload.imagePath === 'string' && item.payload.imagePath !== '') {
-        await deleteProjectImage(client, item.payload.imagePath)
-      }
-      break
-    }
-    case 'delete-project': {
-      await deleteProject(client, String(item.payload.projectId))
-      break
-    }
-    case 'delete-object': {
-      await deleteProjectImage(client, String(item.payload.imagePath))
-      break
-    }
-    default:
-      throw new Error(`Unknown queue kind: ${item.kind}`)
   }
+
+  await deleteBlobsByProjectPrefix(userId, projectId).catch(() => undefined)
+
+  await enqueueWrite({
+    id: crypto.randomUUID(),
+    userId,
+    projectId,
+    kind: 'delete-project',
+    createdAt: new Date().toISOString(),
+    payload: { projectId },
+  })
 }
 
 export const flushProjectSync = (): Promise<void> => {
@@ -277,7 +212,7 @@ export const flushProjectSync = (): Promise<void> => {
     setStatus(SyncStatus.Syncing)
     try {
       for (const item of items) {
-        await processItem(client, item)
+        await processQueuedWrite(client, item)
         await dequeueWrite(item.id)
       }
       setStatus(SyncStatus.Synced)

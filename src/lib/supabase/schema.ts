@@ -1,6 +1,8 @@
 export const PROJECT_IMAGES_BUCKET = 'project-images'
 export const MAX_PROJECT_NAME_LENGTH = 100
 export const MAX_PROJECT_IMAGE_BYTES = 1_572_864
+export const MAX_PROJECTS_PER_USER = 3
+export const MAX_FRAMES_PER_PROJECT = 10
 
 export const buildProjectImagePath = (
   userId: string,

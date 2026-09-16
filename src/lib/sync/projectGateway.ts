@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ProjectFrameRow, ProjectRow } from '../supabase/schema'
 import { PROJECT_IMAGES_BUCKET } from '../supabase/schema'
+import { FRAME_LIMIT_MESSAGE, PROJECT_LIMIT_MESSAGE, mapLimitError } from './limitErrors'
+
+export { FRAME_LIMIT_MESSAGE, PROJECT_LIMIT_MESSAGE }
 
 export interface UpsertProjectInput {
   id: string
@@ -36,6 +39,16 @@ export const listProjects = async (client: SupabaseClient): Promise<ProjectRow[]
   }
 
   return (data ?? []) as ProjectRow[]
+}
+
+export const countProjects = async (client: SupabaseClient): Promise<number> => {
+  const { count, error } = await client.from('projects').select('*', { count: 'exact', head: true })
+
+  if (error) {
+    throw error
+  }
+
+  return count ?? 0
 }
 
 export const getProjectWithFrames = async (
@@ -119,7 +132,7 @@ export const upsertProject = async (
     .single()
 
   if (error || !data) {
-    throw error ?? new Error('Project insert returned no row')
+    mapLimitError(error ?? new Error('Project insert returned no row'))
   }
 
   return data as ProjectRow
@@ -159,7 +172,7 @@ export const upsertFrame = async (
       .single()
 
     if (error || !data) {
-      throw error ?? new Error('Frame update returned no row')
+      mapLimitError(error ?? new Error('Frame update returned no row'))
     }
 
     return data as ProjectFrameRow
@@ -176,7 +189,7 @@ export const upsertFrame = async (
     .single()
 
   if (error || !data) {
-    throw error ?? new Error('Frame insert returned no row')
+    mapLimitError(error ?? new Error('Frame insert returned no row'))
   }
 
   return data as ProjectFrameRow
@@ -249,3 +262,10 @@ export const deleteProjectImage = async (client: SupabaseClient, path: string): 
     throw error
   }
 }
+
+export {
+  buildFrameImageFolder,
+  buildProjectImageFolder,
+  deleteProjectImages,
+  sweepFrameImages,
+} from './projectImageStorage'

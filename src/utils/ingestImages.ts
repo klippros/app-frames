@@ -1,4 +1,5 @@
 import type { Screenshot } from '../types'
+import { MAX_FRAMES_PER_PROJECT } from '../lib/supabase/schema'
 import { createScreenshot } from './frameTitle'
 import type { ImageNormalizationError, NormalizedImage } from './normalizeImage'
 import { ImageNormalizationError as NormalizationError, normalizeImageFile } from './normalizeImage'
@@ -12,12 +13,29 @@ export interface ImageIngestionResult {
 export const ingestImageFiles = async (
   files: File[],
   existingScreenshotCount = 0,
+  maxFrames = MAX_FRAMES_PER_PROJECT,
 ): Promise<ImageIngestionResult> => {
   const screenshots: Screenshot[] = []
   const normalized: NormalizedImage[] = []
   const errors: ImageNormalizationError[] = []
+  const remainingSlots = Math.max(0, maxFrames - existingScreenshotCount)
 
-  for (const file of files) {
+  if (remainingSlots === 0) {
+    if (files.length > 0) {
+      errors.push(
+        new NormalizationError(
+          files[0]?.name ?? 'screenshots',
+          `A project can have at most ${maxFrames} frames.`,
+        ),
+      )
+    }
+    return { screenshots, normalized, errors }
+  }
+
+  const acceptedFiles = files.slice(0, remainingSlots)
+  const overflowFiles = files.slice(remainingSlots)
+
+  for (const file of acceptedFiles) {
     try {
       const result = await normalizeImageFile(file)
       const screenshot = createScreenshot(result.file, existingScreenshotCount + screenshots.length)
@@ -36,6 +54,15 @@ export const ingestImageFiles = async (
         ),
       )
     }
+  }
+
+  if (overflowFiles.length > 0) {
+    errors.push(
+      new NormalizationError(
+        overflowFiles[0]?.name ?? 'screenshots',
+        `Only ${remainingSlots} more frame${remainingSlots === 1 ? '' : 's'} can be added (max ${maxFrames}).`,
+      ),
+    )
   }
 
   return { screenshots, normalized, errors }

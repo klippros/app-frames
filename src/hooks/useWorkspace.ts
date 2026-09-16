@@ -3,7 +3,14 @@ import type { Platform, Screenshot } from '../types'
 import { featureGraphicGradient } from '../utils/featureGraphicConfig'
 import { clearImageCache } from '../utils/loadImage'
 import { normalizeImageFile } from '../utils/normalizeImage'
+import {
+  FRAME_LIMIT_MESSAGE,
+  PROJECT_LIMIT_MESSAGE,
+  countProjects,
+} from '../lib/sync/projectGateway'
 import { flushProjectSync, queueWorkspaceSave, stopProjectSync } from '../lib/sync/projectSync'
+import { supabaseClient } from '../lib/supabase/client'
+import { MAX_FRAMES_PER_PROJECT, MAX_PROJECTS_PER_USER } from '../lib/supabase/schema'
 import { createEmptySketch } from '../workspace/types'
 import type { WorkspaceImageMeta } from '../workspace/types'
 import {
@@ -130,6 +137,23 @@ export const useWorkspace = () => {
 
   const promoteToProject = useCallback(
     async (name: string, ownerId: string, initialScreenshots?: Screenshot[]) => {
+      if (!supabaseClient) {
+        throw new Error('Cloud sync is not configured.')
+      }
+
+      const existingCount = await countProjects(supabaseClient)
+      if (existingCount >= MAX_PROJECTS_PER_USER) {
+        throw new Error(PROJECT_LIMIT_MESSAGE)
+      }
+
+      if (initialScreenshots !== undefined && initialScreenshots.length > MAX_FRAMES_PER_PROJECT) {
+        throw new Error(FRAME_LIMIT_MESSAGE)
+      }
+
+      if (initialScreenshots === undefined && workspace.frames.length > MAX_FRAMES_PER_PROJECT) {
+        throw new Error(FRAME_LIMIT_MESSAGE)
+      }
+
       const projectId = crypto.randomUUID()
       let next = workspace
 
