@@ -1,5 +1,5 @@
 import type { Platform, Screenshot, TitlePosition } from '../types'
-import type { Workspace, WorkspaceFrame } from './types'
+import type { Workspace, WorkspaceFrame, WorkspaceImageMeta } from './types'
 import { createEmptySketch } from './types'
 
 export type WorkspaceAction =
@@ -16,7 +16,7 @@ export type WorkspaceAction =
   | { type: 'SET_GRADIENT_BASE_COLOR'; gradientBaseColor: string }
   | { type: 'SET_SHOW_BEZEL'; showBezel: boolean }
   | { type: 'SET_PROJECT_META'; id: string; name: string; ownerId: string }
-  | { type: 'MARK_SYNCED'; revision: number }
+  | { type: 'MARK_SYNCED'; revision: number; frameImages?: Record<string, WorkspaceImageMeta> }
 
 const revokeFrameUrls = (frames: WorkspaceFrame[]) => {
   for (const frame of frames) {
@@ -151,11 +151,23 @@ export const workspaceReducer = (state: Workspace, action: WorkspaceAction): Wor
         revision: state.revision + 1,
         syncedRevision: null,
       }
-    case 'MARK_SYNCED':
+    case 'MARK_SYNCED': {
+      const frameImages = action.frameImages
       return {
         ...state,
         syncedRevision: action.revision,
+        frames: frameImages
+          ? state.frames.map((frame) => {
+              const image = frameImages[frame.id]
+              if (!image || frame.file.size !== image.byteSize) {
+                return frame
+              }
+
+              return { ...frame, image }
+            })
+          : state.frames,
       }
+    }
     default: {
       throw new Error(`Unhandled workspace action: ${(action as { type: string }).type}`)
     }

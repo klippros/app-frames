@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Workspace, WorkspaceFrame } from '../../workspace/types'
+import type { Workspace, WorkspaceFrame, WorkspaceImageMeta } from '../../workspace/types'
 import { buildProjectImagePath } from '../supabase/schema'
 import { hashBlob } from './contentHash'
 import {
@@ -37,6 +37,8 @@ let flushChain: Promise<void> = Promise.resolve()
 let activeUserId: string | null = null
 let activeClient: SupabaseClient | null = null
 let statusListener: StatusListener | null = null
+const uploadedImagePaths = new Set<string>()
+let uploadedPathsUserId: string | null = null
 
 const setStatus = (status: SyncStatus, message?: string) => {
   statusListener?.(status, message)
@@ -47,6 +49,10 @@ export const startProjectSync = (
   userId: string,
   onStatus?: StatusListener,
 ) => {
+  if (uploadedPathsUserId !== userId) {
+    uploadedImagePaths.clear()
+    uploadedPathsUserId = userId
+  }
   activeClient = client
   activeUserId = userId
   statusListener = onStatus ?? null
@@ -57,6 +63,8 @@ export const stopProjectSync = () => {
   activeClient = null
   activeUserId = null
   statusListener = null
+  uploadedImagePaths.clear()
+  uploadedPathsUserId = null
 }
 
 const blobKey = (userId: string, projectId: string, frameId: string) =>
@@ -66,13 +74,14 @@ export const queueWorkspaceSave = async (
   userId: string,
   workspace: Workspace,
   deletedFrames: readonly { id: string; imagePath?: string }[] = [],
-): Promise<void> => {
+): Promise<Record<string, WorkspaceImageMeta>> => {
   if (workspace.kind !== 'project' || workspace.id === null || workspace.name === null) {
-    return
+    return {}
   }
 
   const projectId = workspace.id
   const clientUpdatedAt = new Date().toISOString()
+  const frameImages: Record<string, WorkspaceImageMeta> = {}
 
   for (const deleted of deletedFrames) {
     await queueFrameDelete(userId, projectId, deleted.id, deleted.imagePath)
@@ -94,21 +103,32 @@ export const queueWorkspaceSave = async (
   })
 
   for (const frame of workspace.frames) {
-    await queueFrameSave(userId, projectId, frame)
+    frameImages[frame.id] = await queueFrameSave(userId, projectId, frame)
   }
+
+  return frameImages
 }
 
 export const queueFrameSave = async (
   userId: string,
   projectId: string,
   frame: WorkspaceFrame,
-): Promise<void> => {
+): Promise<WorkspaceImageMeta> => {
   const key = blobKey(userId, projectId, frame.id)
   await putBlob(userId, key, frame.file)
 
   const contentHash = frame.image?.contentHash ?? (await hashBlob(frame.file))
   const imagePath =
     frame.image?.storagePath ?? buildProjectImagePath(userId, projectId, frame.id, contentHash)
+
+  const image: WorkspaceImageMeta = {
+    contentType: 'image/webp',
+    byteSize: frame.file.size,
+    width: frame.image?.width,
+    height: frame.image?.height,
+    contentHash,
+    storagePath: imagePath,
+  }
 
   await enqueueWrite({
     id: crypto.randomUUID(),
@@ -128,8 +148,11 @@ export const queueFrameSave = async (
       imageHeight: frame.image?.height,
       imageContentHash: contentHash,
       blobKey: key,
+      needsImageUpload: !frame.image?.storagePath && !uploadedImagePaths.has(imagePath),
     },
   })
+
+  return image
 }
 
 export const queueFrameDelete = async (
@@ -178,12 +201,21 @@ const processItem = async (client: SupabaseClient, item: QueuedProjectWrite): Pr
     case 'upsert-frame': {
       const payload = item.payload
       const imagePath = String(payload.imagePath)
-      const key = String(payload.blobKey)
-      const blob = await getBlob(key)
-      if (!blob) {
-        throw new Error('Missing local blob for frame upload')
+      const skipUpload = payload.needsImageUpload === false || uploadedImagePaths.has(imagePath)
+      let createdObject = false
+
+      if (!skipUpload) {
+        const key = String(payload.blobKey)
+        const blob = await getBlob(key)
+        if (!blob) {
+          throw new Error('Missing local blob for frame upload')
+        }
+        const result = await uploadProjectImage(client, imagePath, blob)
+        createdObject = result === 'created'
       }
-      await uploadProjectImage(client, imagePath, blob)
+
+      uploadedImagePaths.add(imagePath)
+
       try {
         await upsertFrame(client, {
           id: String(payload.id),
@@ -200,7 +232,10 @@ const processItem = async (client: SupabaseClient, item: QueuedProjectWrite): Pr
             typeof payload.imageContentHash === 'string' ? payload.imageContentHash : undefined,
         })
       } catch (error) {
-        await deleteProjectImage(client, imagePath).catch(() => undefined)
+        if (createdObject) {
+          await deleteProjectImage(client, imagePath).catch(() => undefined)
+          uploadedImagePaths.delete(imagePath)
+        }
         throw error
       }
       break

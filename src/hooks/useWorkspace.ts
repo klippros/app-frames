@@ -4,7 +4,7 @@ import { featureGraphicGradient } from '../utils/featureGraphicConfig'
 import { clearImageCache } from '../utils/loadImage'
 import { normalizeImageFile } from '../utils/normalizeImage'
 import { flushProjectSync, queueWorkspaceSave, stopProjectSync } from '../lib/sync/projectSync'
-import { createEmptySketch } from '../workspace/types'
+import { createEmptySketch, type WorkspaceImageMeta } from '../workspace/types'
 import {
   frameToScreenshot,
   screenshotToFrame,
@@ -138,17 +138,20 @@ export const useWorkspace = () => {
       }
       const next = workspaceReducer(workspace, action)
       dispatch(action)
-      await queueWorkspaceSave(ownerId, next)
+      const frameImages = await queueWorkspaceSave(ownerId, next)
       await flushProjectSync()
-      dispatch({ type: 'MARK_SYNCED', revision: next.revision })
+      dispatch({ type: 'MARK_SYNCED', revision: next.revision, frameImages })
       return projectId
     },
     [workspace],
   )
 
-  const markSynced = useCallback((revision: number) => {
-    dispatch({ type: 'MARK_SYNCED', revision })
-  }, [])
+  const markSynced = useCallback(
+    (revision: number, frameImages?: Record<string, WorkspaceImageMeta>) => {
+      dispatch({ type: 'MARK_SYNCED', revision, frameImages })
+    },
+    [],
+  )
 
   const { syncStatus, syncMessage, saveNow } = useProjectSync(workspace, markSynced)
 

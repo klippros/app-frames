@@ -194,6 +194,40 @@ describe('workspaceReducer', () => {
     expect(synced.syncedRevision).toBe(project.revision)
   })
 
+  it('stamps synced image paths without bumping revision', () => {
+    const frame = createFrame('a', 0)
+    const project = {
+      ...createEmptySketch(),
+      kind: 'project' as const,
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'My App',
+      ownerId: 'user-1',
+      revision: 1,
+      frames: [frame],
+    }
+
+    const synced = workspaceReducer(project, {
+      type: 'MARK_SYNCED',
+      revision: 1,
+      frameImages: {
+        a: {
+          contentType: 'image/webp',
+          byteSize: frame.file.size,
+          contentHash: 'abc123',
+          storagePath: 'user/project/a/abc123.webp',
+        },
+      },
+    })
+
+    expect(synced.revision).toBe(1)
+    expect(synced.frames[0]?.image).toEqual({
+      contentType: 'image/webp',
+      byteSize: frame.file.size,
+      contentHash: 'abc123',
+      storagePath: 'user/project/a/abc123.webp',
+    })
+  })
+
   it('resets to an empty sketch and revokes frame URLs', () => {
     const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     const initial = {

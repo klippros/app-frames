@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthStatus } from '../types/auth'
 import { supabaseClient } from '../lib/supabase/client'
-import type { Workspace } from '../workspace/types'
+import type { Workspace, WorkspaceImageMeta } from '../workspace/types'
 import {
   flushProjectSync,
   queueWorkspaceSave,
@@ -25,12 +25,16 @@ const framesSnapshot = (workspace: Workspace): KnownFrame[] =>
     imagePath: frame.image?.storagePath,
   }))
 
-export const useProjectSync = (workspace: Workspace, onSynced?: (revision: number) => void) => {
+export const useProjectSync = (
+  workspace: Workspace,
+  onSynced?: (revision: number, frameImages?: Record<string, WorkspaceImageMeta>) => void,
+) => {
   const { authStatus, user, isConfigured } = useAuth()
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(SyncStatus.Idle)
   const [syncMessage, setSyncMessage] = useState<string | undefined>()
   const saveTimer = useRef<number | null>(null)
   const lastQueuedRevision = useRef<number | null>(null)
+  const lastQueuedFrameImages = useRef<Record<string, WorkspaceImageMeta>>({})
   const knownFramesRef = useRef<KnownFrame[]>([])
   const pendingFramesRef = useRef<KnownFrame[] | null>(null)
   const knownProjectIdRef = useRef<string | null>(null)
@@ -50,7 +54,7 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
           knownFramesRef.current = pendingFramesRef.current
           pendingFramesRef.current = null
         }
-        onSynced?.(lastQueuedRevision.current)
+        onSynced?.(lastQueuedRevision.current, lastQueuedFrameImages.current)
       }
     })
 
@@ -119,7 +123,7 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
 
         lastQueuedRevision.current = workspace.revision
         pendingFramesRef.current = nextKnown
-        await queueWorkspaceSave(user.id, workspace, deletedFrames)
+        lastQueuedFrameImages.current = await queueWorkspaceSave(user.id, workspace, deletedFrames)
         await flushProjectSync()
       })()
     }, AUTOSAVE_MS)
@@ -141,7 +145,7 @@ export const useProjectSync = (workspace: Workspace, onSynced?: (revision: numbe
 
     lastQueuedRevision.current = workspace.revision
     pendingFramesRef.current = nextKnown
-    await queueWorkspaceSave(user.id, workspace, deletedFrames)
+    lastQueuedFrameImages.current = await queueWorkspaceSave(user.id, workspace, deletedFrames)
     await flushProjectSync()
     // MARK_SYNCED / known-frame advance is driven by SyncStatus.Synced.
   }, [user, workspace])

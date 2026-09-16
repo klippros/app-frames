@@ -196,19 +196,43 @@ export const deleteProject = async (client: SupabaseClient, projectId: string): 
   }
 }
 
+type ImageUploadResult = 'created' | 'exists'
+
+const isDuplicateStorageError = (error: {
+  message?: string
+  statusCode?: string | number
+  error?: string
+  name?: string
+}): boolean => {
+  const status = String(error.statusCode ?? '')
+  const haystack = `${error.error ?? ''} ${error.name ?? ''} ${error.message ?? ''}`.toLowerCase()
+  return (
+    status === '409' ||
+    haystack.includes('already exists') ||
+    haystack.includes('duplicate') ||
+    haystack.includes('keyalreadyexists')
+  )
+}
+
 export const uploadProjectImage = async (
   client: SupabaseClient,
   path: string,
   blob: Blob,
-): Promise<void> => {
+): Promise<ImageUploadResult> => {
   const { error } = await client.storage.from(PROJECT_IMAGES_BUCKET).upload(path, blob, {
     contentType: 'image/webp',
     upsert: false,
   })
 
-  if (error && !error.message.toLowerCase().includes('already exists')) {
-    throw error
+  if (!error) {
+    return 'created'
   }
+
+  if (isDuplicateStorageError(error)) {
+    return 'exists'
+  }
+
+  throw error
 }
 
 export const downloadProjectImage = async (client: SupabaseClient, path: string): Promise<Blob> => {
