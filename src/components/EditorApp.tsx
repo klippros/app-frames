@@ -1,4 +1,4 @@
-import { Box, Text } from '@chakra-ui/react'
+import { Box, Flex, Spinner, Text } from '@chakra-ui/react'
 import { useState } from 'react'
 import { useAuth } from '../hooks/authContext'
 import { useLeaveProtection } from '../hooks/useLeaveProtection'
@@ -103,28 +103,33 @@ export const EditorApp = () => {
         position="relative"
         zIndex={1}
       >
-        {(isOpening || routeError !== null) && (
-          <Text px={4} pt={2} fontSize="sm" color={isOpening ? 'whiteAlpha.600' : 'red.300'}>
-            {isOpening ? 'Opening project…' : routeError}
+        {routeError !== null && (
+          <Text px={4} pt={2} fontSize="sm" color="red.300">
+            {routeError}
           </Text>
         )}
-        <ScreenshotWorkspace
-          screenshots={workspaceState.screenshots}
-          platform={workspaceState.platform}
-          gradientConfig={workspaceState.gradientConfig}
-          showBezel={workspaceState.showBezel}
-          isEditingRoute={isEditingRoute}
-          projectsListKey={projectsListKey}
-          openingProjectId={isOpening ? (routeProjectId ?? null) : null}
-          onSelect={handleStartSketch}
-          onReplace={workspaceState.replaceScreenshot}
-          onDelete={workspaceState.deleteScreenshot}
-          onSwap={workspaceState.swapScreenshots}
-          onTitleChange={workspaceState.setTitle}
-          onToggleTitlePosition={workspaceState.toggleTitlePosition}
-          onOpenProject={handleOpenProject}
-          onCreateProject={handleCreateProject}
-        />
+        {isOpening ? (
+          <Flex flex="1" align="center" justify="center" w="full">
+            <Spinner color="white" />
+          </Flex>
+        ) : (
+          <ScreenshotWorkspace
+            screenshots={workspaceState.screenshots}
+            platform={workspaceState.platform}
+            gradientConfig={workspaceState.gradientConfig}
+            showBezel={workspaceState.showBezel}
+            isEditingRoute={isEditingRoute}
+            projectsListKey={projectsListKey}
+            onSelect={handleStartSketch}
+            onReplace={workspaceState.replaceScreenshot}
+            onDelete={workspaceState.deleteScreenshot}
+            onSwap={workspaceState.swapScreenshots}
+            onTitleChange={workspaceState.setTitle}
+            onToggleTitlePosition={workspaceState.toggleTitlePosition}
+            onOpenProject={handleOpenProject}
+            onCreateProject={handleCreateProject}
+          />
+        )}
       </Box>
 
       <Footer />

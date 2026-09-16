@@ -1,9 +1,9 @@
 import type { RendererId, Screenshot, TitlePosition } from '../types'
+import { TITLE_FONT_FAMILY } from './titleFont'
 
 export const DEFAULT_FRAME_TITLE = 'Click here\nto edit title'
 export const TEXT_BAND_HEIGHT_RATIO = 0.2
 export const MAX_LINES = 3
-export const TITLE_FONT_FAMILY = "'Archivo Black', sans-serif"
 export const TITLE_COLOR = '#ffffff'
 export const PREVIEW_CANVAS_MAX_WIDTH = 320
 

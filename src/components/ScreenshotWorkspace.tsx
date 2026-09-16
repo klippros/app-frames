@@ -13,7 +13,6 @@ export interface ScreenshotWorkspaceProps {
   /** True on /sketch or /projects/:id — editor only shows on editing routes. */
   isEditingRoute: boolean
   projectsListKey?: number
-  openingProjectId?: string | null
   onSelect: (screenshots: Screenshot[]) => void
   onReplace: (id: string, file: File) => void
   onDelete: (id: string) => void
@@ -31,7 +30,6 @@ export const ScreenshotWorkspace = ({
   showBezel,
   isEditingRoute,
   projectsListKey = 0,
-  openingProjectId = null,
   onSelect,
   onReplace,
   onDelete,
@@ -58,7 +56,6 @@ export const ScreenshotWorkspace = ({
       <MainContent align="start">
         <WelcomeScreen
           projectsListKey={projectsListKey}
-          openingProjectId={openingProjectId}
           onSelectScreenshots={onSelect}
           onOpenProject={onOpenProject}
           onCreateProject={onCreateProject}

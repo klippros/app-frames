@@ -1,7 +1,7 @@
 import { Box, HStack } from '@chakra-ui/react'
 import { faImage, faTextHeight, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { previewFrameMaxWidth, toolbarControlSize } from '../../layout'
 import type { ExportFormat, TitlePosition } from '../../types'
 import type { GradientConfig } from '../../utils/featureGraphicConfig'
@@ -44,18 +44,20 @@ export const ScreenshotFrame = ({
   const [isEditing, setIsEditing] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [canvasWidth, setCanvasWidth] = useState(format.width)
+  const [canvasWidth, setCanvasWidth] = useState(0)
+  const [fontReady, setFontReady] = useState(false)
+  const [canvasRendered, setCanvasRendered] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const preview = previewRef.current
     if (!preview) {
       return undefined
     }
 
     const updateWidth = () => {
-      const canvas = preview.querySelector('canvas')
-      if (canvas) {
-        setCanvasWidth(canvas.clientWidth)
+      const width = preview.clientWidth
+      if (width > 0) {
+        setCanvasWidth(width)
       }
     }
 
@@ -67,7 +69,13 @@ export const ScreenshotFrame = ({
     return () => {
       observer.disconnect()
     }
-  }, [format.width, screenshotUrl, title, titlePosition])
+  }, [format.height, format.width])
+
+  useLayoutEffect(() => {
+    setCanvasRendered(false)
+  }, [format, gradientConfig.baseColor, screenshotUrl, showBezel])
+
+  const isPreviewReady = canvasWidth > 0 && fontReady && canvasRendered
 
   const handleReplaceClick = () => {
     inputRef.current?.click()
@@ -103,7 +111,10 @@ export const ScreenshotFrame = ({
         flexShrink={0}
         h="full"
         maxH={`calc(${previewFrameMaxWidth} * ${format.height} / ${format.width})`}
+        opacity={isPreviewReady ? 1 : 0}
+        pointerEvents={isPreviewReady ? 'auto' : 'none'}
         position="relative"
+        visibility={isPreviewReady ? 'visible' : 'hidden'}
       >
         <DeleteFrameDialog
           open={deleteDialogOpen}
@@ -134,6 +145,9 @@ export const ScreenshotFrame = ({
             showBezel={showBezel}
             title={title}
             titlePosition={titlePosition}
+            onRendered={() => {
+              setCanvasRendered(true)
+            }}
           />
           <FrameTitleOverlay
             title={title}
@@ -144,6 +158,9 @@ export const ScreenshotFrame = ({
             isHovered={isHovered}
             onTitleChange={onTitleChange}
             onEditEnd={handleEditEnd}
+            onFontReady={() => {
+              setFontReady(true)
+            }}
           />
         </Box>
         <HStack

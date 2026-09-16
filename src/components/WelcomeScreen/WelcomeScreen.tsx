@@ -15,7 +15,6 @@ import { ProjectFolderTile } from './ProjectFolderTile'
 
 export interface WelcomeScreenProps {
   projectsListKey?: number
-  openingProjectId?: string | null
   onSelectScreenshots: (screenshots: Screenshot[]) => void
   onOpenProject: (projectId: string) => void
   onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
@@ -23,7 +22,6 @@ export interface WelcomeScreenProps {
 
 export const WelcomeScreen = ({
   projectsListKey = 0,
-  openingProjectId = null,
   onSelectScreenshots,
   onOpenProject,
   onCreateProject,
@@ -112,8 +110,6 @@ export const WelcomeScreen = ({
             <ProjectFolderTile
               key={project.id}
               name={project.name}
-              disabled={openingProjectId !== null}
-              opening={openingProjectId === project.id}
               onClick={() => {
                 onOpenProject(project.id)
               }}
