@@ -10,7 +10,11 @@ import {
 } from '../lib/sync/projectGateway'
 import { getProjectSyncGeneration, stopProjectSync, syncWorkspace } from '../lib/sync/projectSync'
 import { supabaseClient } from '../lib/supabase/client'
-import { MAX_FRAMES_PER_PROJECT, MAX_PROJECTS_PER_USER } from '../lib/supabase/schema'
+import {
+  MAX_FRAMES_PER_PROJECT,
+  MAX_PROJECT_NAME_LENGTH,
+  MAX_PROJECTS_PER_USER,
+} from '../lib/supabase/schema'
 import { createEmptySketch } from '../workspace/types'
 import type { WorkspaceImageMeta } from '../workspace/types'
 import {
@@ -83,20 +87,14 @@ export const useWorkspace = () => {
     })
   }, [])
 
-  const replaceScreenshot = useCallback((id: string, file: File) => {
-    void (async () => {
-      try {
-        const normalized = await normalizeImageFile(file)
-        dispatch({
-          type: 'REPLACE_FRAME',
-          id,
-          file: normalized.file,
-          url: URL.createObjectURL(normalized.file),
-        })
-      } catch {
-        // Keep the existing frame when replacement normalization fails.
-      }
-    })()
+  const replaceScreenshot = useCallback(async (id: string, file: File): Promise<void> => {
+    const normalized = await normalizeImageFile(file)
+    dispatch({
+      type: 'REPLACE_FRAME',
+      id,
+      file: normalized.file,
+      url: URL.createObjectURL(normalized.file),
+    })
   }, [])
 
   const deleteScreenshot = useCallback((id: string) => {
@@ -152,6 +150,14 @@ export const useWorkspace = () => {
         throw new Error('Cloud sync is not configured.')
       }
 
+      const trimmedName = name.trim()
+      if (trimmedName.length === 0) {
+        throw new Error('Enter a project name.')
+      }
+      if (trimmedName.length > MAX_PROJECT_NAME_LENGTH) {
+        throw new Error(`Name must be ${MAX_PROJECT_NAME_LENGTH} characters or fewer.`)
+      }
+
       const existingCount = await countProjects(supabaseClient)
       if (existingCount >= MAX_PROJECTS_PER_USER) {
         throw new Error(PROJECT_LIMIT_MESSAGE)
@@ -182,7 +188,7 @@ export const useWorkspace = () => {
       const metaAction = {
         type: 'SET_PROJECT_META' as const,
         id: projectId,
-        name,
+        name: trimmedName,
         ownerId,
       }
       next = workspaceReducer(next, metaAction)

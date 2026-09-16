@@ -172,7 +172,18 @@ export const EditorApp = () => {
             projectsError={ownedProjects.error}
             screenshotError={screenshotError}
             onSelect={handleStartSketch}
-            onReplace={workspaceState.replaceScreenshot}
+            onReplace={async (id, file) => {
+              setScreenshotError(null)
+              try {
+                await workspaceState.replaceScreenshot(id, file)
+              } catch (replaceError) {
+                const message =
+                  replaceError instanceof Error
+                    ? replaceError.message
+                    : 'Could not process screenshot.'
+                setScreenshotError(`${file.name}: ${message}`)
+              }
+            }}
             onDelete={workspaceState.deleteScreenshot}
             onSwap={workspaceState.swapScreenshots}
             onTitleChange={workspaceState.setTitle}

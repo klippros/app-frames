@@ -18,7 +18,7 @@ export interface ScreenshotWorkspaceProps {
   projectsError?: string | null
   screenshotError?: string | null
   onSelect: (screenshots: Screenshot[]) => void
-  onReplace: (id: string, file: File) => void
+  onReplace: (id: string, file: File) => Promise<void> | void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
   onTitleChange: (id: string, title: string) => void
@@ -49,6 +49,11 @@ export const ScreenshotWorkspace = ({
   onScreenshotErrors,
 }: ScreenshotWorkspaceProps) => (
   <Flex direction="column" flex="1" minH={0} w="full">
+    {isEditingRoute && screenshotError !== null && (
+      <Flex px={4} pt={2} fontSize="sm" color="red.300">
+        {screenshotError}
+      </Flex>
+    )}
     {isEditingRoute && screenshots.length > 0 ? (
       <FramesEditor
         screenshots={screenshots}

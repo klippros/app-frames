@@ -20,7 +20,7 @@ export interface ScreenshotFrameProps {
   showBezel: boolean
   title: string
   titlePosition: TitlePosition
-  onReplace: (file: File) => void
+  onReplace: (file: File) => Promise<void> | void
   onDelete: () => void
   onTitleChange: (title: string) => void
   onToggleTitlePosition: () => void
@@ -89,7 +89,7 @@ export const ScreenshotFrame = ({
       return
     }
 
-    onReplace(file)
+    void onReplace(file)
   }
 
   const handlePreviewClick = () => {

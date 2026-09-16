@@ -49,11 +49,6 @@ export const CreateProjectDialog = ({
       setError(`Name must be ${MAX_PROJECT_NAME_LENGTH} characters or fewer.`)
       return
     }
-    if (screenshots.length === 0) {
-      setError('Select at least one screenshot.')
-      return
-    }
-
     setSubmitting(true)
     setError(null)
     try {
@@ -67,8 +62,7 @@ export const CreateProjectDialog = ({
     }
   }
 
-  const canSubmit =
-    !atProjectLimit && name.trim().length > 0 && screenshots.length > 0 && !submitting
+  const canSubmit = !atProjectLimit && name.trim().length > 0 && !submitting
 
   return (
     <Dialog.Root
@@ -109,7 +103,7 @@ export const CreateProjectDialog = ({
                   </Text>
                 ) : (
                   <Text fontSize="sm" color="whiteAlpha.800">
-                    Name your project and select the screenshots to start with.
+                    Name your project. You can add screenshots now or later.
                   </Text>
                 )}
                 <Input

@@ -1,11 +1,13 @@
+import { ImageNormalizationError, inspectImageFile, isAcceptedImageType } from './imageContainer'
+
+export { ImageNormalizationError, isAcceptedImageType } from './imageContainer'
+
 export const MAX_IMAGE_WIDTH = 1080
 export const MAX_SOURCE_BYTES = 40 * 1024 * 1024
 export const MAX_SOURCE_PIXELS = 40_000_000
 export const TARGET_OUTPUT_BYTES = 500 * 1024
 export const MAX_OUTPUT_BYTES = 1.5 * 1024 * 1024
 export const WEBP_CONTENT_TYPE = 'image/webp'
-
-const REJECTED_TYPES = new Set(['image/svg+xml', 'image/svg'])
 
 export interface ScaledDimensions {
   width: number
@@ -20,24 +22,6 @@ export interface NormalizedImage {
   contentType: typeof WEBP_CONTENT_TYPE
   byteSize: number
   wasResized: boolean
-}
-
-export class ImageNormalizationError extends Error {
-  readonly fileName: string
-
-  constructor(fileName: string, message: string) {
-    super(message)
-    this.name = 'ImageNormalizationError'
-    this.fileName = fileName
-  }
-}
-
-export const isAcceptedImageType = (type: string): boolean => {
-  if (!type.startsWith('image/')) {
-    return false
-  }
-
-  return !REJECTED_TYPES.has(type.toLowerCase())
 }
 
 export const computeScaledDimensions = (
@@ -145,6 +129,9 @@ export const normalizeImageFile = async (file: File): Promise<NormalizedImage> =
     throw new ImageNormalizationError(file.name, 'Image file is too large')
   }
 
+  const sourceBytes = new Uint8Array(await file.arrayBuffer())
+  inspectImageFile(file, sourceBytes)
+
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => {
     throw new ImageNormalizationError(file.name, 'Could not decode image')
   })
@@ -157,7 +144,12 @@ export const normalizeImageFile = async (file: File): Promise<NormalizedImage> =
 
     const dimensions = computeScaledDimensions(bitmap.width, bitmap.height)
     const canvas = drawBitmapToCanvas(bitmap, dimensions.width, dimensions.height)
-    const blob = await encodeWebpUnderLimit(canvas, file.name)
+    const blob = await encodeWebpUnderLimit(canvas, file.name).catch((error: unknown) => {
+      if (error instanceof ImageNormalizationError) {
+        throw error
+      }
+      throw new ImageNormalizationError(file.name, 'Could not encode image')
+    })
     const baseName = file.name.replace(/\.[^.]+$/u, '') || 'screenshot'
     const normalizedFile = new File([blob], `${baseName}.webp`, {
       type: WEBP_CONTENT_TYPE,

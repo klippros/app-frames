@@ -13,7 +13,7 @@ export interface FramesEditorProps {
   platform: Platform
   gradientConfig: GradientConfig
   showBezel: boolean
-  onReplace: (id: string, file: File) => void
+  onReplace: (id: string, file: File) => Promise<void> | void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
   onTitleChange: (id: string, title: string) => void
@@ -58,7 +58,7 @@ export const FramesEditor = ({
               title={screenshot.title}
               titlePosition={screenshot.titlePosition}
               onReplace={(file) => {
-                onReplace(screenshot.id, file)
+                void onReplace(screenshot.id, file)
               }}
               onDelete={() => {
                 onDelete(screenshot.id)
