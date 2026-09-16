@@ -11,6 +11,7 @@ export interface FrameCanvasProps {
   showBezel: boolean
   title: string
   titlePosition: TitlePosition
+  onRendered?: () => void
 }
 
 export const FrameCanvas = ({
@@ -20,8 +21,11 @@ export const FrameCanvas = ({
   showBezel,
   title,
   titlePosition,
+  onRendered,
 }: FrameCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const onRenderedRef = useRef(onRendered)
+  onRenderedRef.current = onRendered
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -32,32 +36,40 @@ export const FrameCanvas = ({
     let cancelled = false
 
     void (async () => {
-      const image = await loadImage(screenshotUrl)
-      if (cancelled) {
-        return
-      }
+      try {
+        const image = await loadImage(screenshotUrl)
+        if (cancelled) {
+          return
+        }
 
-      canvas.width = format.width
-      canvas.height = format.height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        return
-      }
+        canvas.width = format.width
+        canvas.height = format.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          return
+        }
 
-      await drawFramedScreenshot(
-        format.renderer,
-        ctx,
-        image,
-        format.width,
-        format.height,
-        gradientConfig,
-        {
-          title,
-          titlePosition,
-          drawTitle: false,
-          showBezel,
-        },
-      )
+        await drawFramedScreenshot(
+          format.renderer,
+          ctx,
+          image,
+          format.width,
+          format.height,
+          gradientConfig,
+          {
+            title,
+            titlePosition,
+            drawTitle: false,
+            showBezel,
+          },
+        )
+
+        if (!cancelled) {
+          onRenderedRef.current?.()
+        }
+      } catch {
+        // Keep the previous canvas contents when drawing fails.
+      }
     })()
 
     return () => {
@@ -68,10 +80,11 @@ export const FrameCanvas = ({
   return (
     <canvas
       ref={canvasRef}
+      width={format.width}
+      height={format.height}
       style={{
-        maxWidth: '320px',
         width: '100%',
-        height: 'auto',
+        height: '100%',
         display: 'block',
       }}
     />

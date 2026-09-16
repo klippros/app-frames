@@ -1,6 +1,8 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { MAX_FRAMES_PER_PROJECT } from '../lib/supabase/schema'
 import type { Screenshot } from '../types'
-import { createScreenshot } from '../utils/frameTitle'
+import type { ImageNormalizationError } from '../utils/normalizeImage'
+import { ingestImageFiles } from '../utils/ingestImages'
 
 export interface ScreenshotFileInputHandle {
   open: () => void
@@ -8,11 +10,16 @@ export interface ScreenshotFileInputHandle {
 
 export interface ScreenshotFileInputProps {
   existingScreenshotCount?: number
+  maxFrames?: number
   onSelect: (screenshots: Screenshot[]) => void
+  onErrors?: (errors: ImageNormalizationError[]) => void
 }
 
 export const ScreenshotFileInput = forwardRef<ScreenshotFileInputHandle, ScreenshotFileInputProps>(
-  ({ existingScreenshotCount = 0, onSelect }, ref) => {
+  (
+    { existingScreenshotCount = 0, maxFrames = MAX_FRAMES_PER_PROJECT, onSelect, onErrors },
+    ref,
+  ) => {
     const inputRef = useRef<HTMLInputElement>(null)
 
     useImperativeHandle(ref, () => ({
@@ -22,20 +29,28 @@ export const ScreenshotFileInput = forwardRef<ScreenshotFileInputHandle, Screens
     }))
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files ?? []).filter((file) =>
-        file.type.startsWith('image/'),
-      )
+      const files = Array.from(event.target.files ?? [])
+      event.target.value = ''
 
       if (files.length === 0) {
         return
       }
 
-      const screenshots: Screenshot[] = files.map((file, index) =>
-        createScreenshot(file, existingScreenshotCount + index),
-      )
+      void (async () => {
+        const { screenshots, errors } = await ingestImageFiles(
+          files,
+          existingScreenshotCount,
+          maxFrames,
+        )
 
-      onSelect(screenshots)
-      event.target.value = ''
+        if (errors.length > 0) {
+          onErrors?.(errors)
+        }
+
+        if (screenshots.length > 0) {
+          onSelect(screenshots)
+        }
+      })()
     }
 
     return (

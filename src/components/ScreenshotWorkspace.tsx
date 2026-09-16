@@ -1,21 +1,31 @@
 import { Flex } from '@chakra-ui/react'
+import type { ProjectRow } from '../lib/supabase/schema'
 import type { Platform, Screenshot } from '../types'
 import type { GradientConfig } from '../utils/featureGraphicConfig'
 import { FramesEditor } from './FramesEditor/FramesEditor'
 import { MainContent } from './MainContent'
-import { ScreenshotPicker } from './ScreenshotPicker'
+import { WelcomeScreen } from './WelcomeScreen/WelcomeScreen'
 
 export interface ScreenshotWorkspaceProps {
   screenshots: Screenshot[]
   platform: Platform
   gradientConfig: GradientConfig
   showBezel: boolean
+  /** True on /sketch or /projects/:id — editor only shows on editing routes. */
+  isEditingRoute: boolean
+  projects: ProjectRow[]
+  projectsLoading?: boolean
+  projectsError?: string | null
+  screenshotError?: string | null
   onSelect: (screenshots: Screenshot[]) => void
-  onReplace: (id: string, file: File) => void
+  onReplace: (id: string, file: File) => Promise<void> | void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
   onTitleChange: (id: string, title: string) => void
   onToggleTitlePosition: (id: string) => void
+  onOpenProject: (projectId: string) => void
+  onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
+  onScreenshotErrors?: (message: string) => void
 }
 
 export const ScreenshotWorkspace = ({
@@ -23,15 +33,28 @@ export const ScreenshotWorkspace = ({
   platform,
   gradientConfig,
   showBezel,
+  isEditingRoute,
+  projects,
+  projectsLoading = false,
+  projectsError = null,
+  screenshotError = null,
   onSelect,
   onReplace,
   onDelete,
   onSwap,
   onTitleChange,
   onToggleTitlePosition,
+  onOpenProject,
+  onCreateProject,
+  onScreenshotErrors,
 }: ScreenshotWorkspaceProps) => (
   <Flex direction="column" flex="1" minH={0} w="full">
-    {screenshots.length > 0 ? (
+    {isEditingRoute && screenshotError !== null && (
+      <Flex px={4} pt={2} fontSize="sm" color="red.300">
+        {screenshotError}
+      </Flex>
+    )}
+    {isEditingRoute && screenshots.length > 0 ? (
       <FramesEditor
         screenshots={screenshots}
         platform={platform}
@@ -44,8 +67,17 @@ export const ScreenshotWorkspace = ({
         onToggleTitlePosition={onToggleTitlePosition}
       />
     ) : (
-      <MainContent>
-        <ScreenshotPicker onSelect={onSelect} />
+      <MainContent align="start">
+        <WelcomeScreen
+          projects={projects}
+          projectsLoading={projectsLoading}
+          projectsError={projectsError}
+          screenshotError={screenshotError}
+          onSelectScreenshots={onSelect}
+          onOpenProject={onOpenProject}
+          onCreateProject={onCreateProject}
+          onScreenshotErrors={onScreenshotErrors}
+        />
       </MainContent>
     )}
   </Flex>

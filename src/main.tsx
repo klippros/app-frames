@@ -5,7 +5,8 @@ import '@fortawesome/fontawesome-svg-core/styles.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import { App } from './App.tsx'
+import { AppRouter } from './components/AppRouter.tsx'
+import { AuthProvider } from './hooks/AuthProvider.tsx'
 
 config.autoAddCss = false
 
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ChakraProvider value={system}>
       <Theme appearance="dark" hasBackground={false}>
-        <App />
+        <AuthProvider>
+          <AppRouter />
+        </AuthProvider>
       </Theme>
     </ChakraProvider>
   </StrictMode>,

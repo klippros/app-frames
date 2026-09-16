@@ -1,14 +1,6 @@
-import {
-  getTitleBlockOffset,
-  layoutTitleLines,
-  TITLE_COLOR,
-  TITLE_FONT_FAMILY,
-} from '../frameTitle'
+import { getTitleBlockOffset, layoutTitleLines, TITLE_COLOR } from '../frameTitle'
+import { ensureTitleFontLoaded, TITLE_FONT_FAMILY } from '../titleFont'
 import type { Rect } from '../frameTitle'
-
-export async function ensureTitleFontLoaded(fontSize: number): Promise<void> {
-  await document.fonts.load(`${fontSize}px ${TITLE_FONT_FAMILY}`)
-}
 
 export async function drawFrameTitle(
   ctx: CanvasRenderingContext2D,

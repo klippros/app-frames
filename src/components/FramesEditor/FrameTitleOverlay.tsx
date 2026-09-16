@@ -1,5 +1,6 @@
 import { Box } from '@chakra-ui/react'
-import { useEffect, useMemo, useRef } from 'react'
+import type { CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ExportFormat, TitlePosition } from '../../types'
 import {
   constrainTitleInput,
@@ -7,8 +8,8 @@ import {
   layoutTitleLines,
   MAX_LINES,
   TITLE_COLOR,
-  TITLE_FONT_FAMILY,
 } from '../../utils/frameTitle'
+import { ensureTitleFontLoaded, isTitleFontReady, TITLE_FONT_FAMILY } from '../../utils/titleFont'
 
 export interface FrameTitleOverlayProps {
   title: string
@@ -19,6 +20,7 @@ export interface FrameTitleOverlayProps {
   isHovered: boolean
   onTitleChange: (title: string) => void
   onEditEnd: () => void
+  onFontReady: () => void
 }
 
 const HOVER_FONT_SCALE = 1.06
@@ -32,8 +34,12 @@ export const FrameTitleOverlay = ({
   isHovered,
   onTitleChange,
   onEditEnd,
+  onFontReady,
 }: FrameTitleOverlayProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const onFontReadyRef = useRef(onFontReady)
+  onFontReadyRef.current = onFontReady
+  const [fontReady, setFontReady] = useState(() => isTitleFontReady())
 
   const layout = useMemo(
     () => getFrameLayout(format.width, format.height, titlePosition, format.renderer),
@@ -42,16 +48,37 @@ export const FrameTitleOverlay = ({
 
   const scale = canvasWidth / format.width
   const hoverFontScale = isHovered && !isEditing ? HOVER_FONT_SCALE : 1
-  const scaledFontSize = layout.fontSize * scale * hoverFontScale
+  const scaledFontSize = layout.fontSize * scale
   const scaledLineHeight = layout.lineHeight * scale
   const horizontalPadding = layout.textHorizontalPadding * scale
   const displayLines = useMemo(
-    () => layoutTitleLines(title, layout.maxTextWidth, layout.fontSize),
-    [layout.fontSize, layout.maxTextWidth, title],
+    () => (fontReady ? layoutTitleLines(title, layout.maxTextWidth, layout.fontSize) : ['']),
+    [fontReady, layout.fontSize, layout.maxTextWidth, title],
   )
   const displayText = displayLines.map((line) => line || '\u00A0').join('\n')
   const textAreaTop = layout.textContentArea.y * scale
   const textAreaHeight = layout.textContentArea.height * scale
+  const isLaidOut = canvasWidth > 0 && fontReady
+
+  useLayoutEffect(() => {
+    if (fontReady) {
+      onFontReadyRef.current()
+      return undefined
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      await ensureTitleFontLoaded()
+      if (!cancelled) {
+        setFontReady(true)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [fontReady])
 
   useEffect(() => {
     if (isEditing) {
@@ -60,16 +87,17 @@ export const FrameTitleOverlay = ({
     }
   }, [isEditing])
 
-  const sharedTextStyle = {
+  const sharedTextStyle: CSSProperties = {
     color: TITLE_COLOR,
     fontFamily: TITLE_FONT_FAMILY,
     fontSize: `${scaledFontSize}px`,
     lineHeight: `${scaledLineHeight}px`,
-    textAlign: 'center' as const,
+    textAlign: 'center',
     width: '100%',
-    whiteSpace: 'pre' as const,
-    overflow: 'hidden' as const,
-    transition: 'font-size 150ms ease',
+    whiteSpace: 'pre',
+    overflow: 'hidden',
+    transform: hoverFontScale === 1 ? undefined : `scale(${hoverFontScale})`,
+    transition: 'transform 150ms ease',
   }
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -92,6 +120,10 @@ export const FrameTitleOverlay = ({
     if (event.key === 'Enter' && title.split('\n').length >= MAX_LINES) {
       event.preventDefault()
     }
+  }
+
+  if (!isLaidOut) {
+    return null
   }
 
   return (
@@ -138,11 +170,12 @@ export const FrameTitleOverlay = ({
             outline: 'none',
             padding: `0 ${horizontalPadding}px`,
             resize: 'none',
+            transform: undefined,
             transition: undefined,
           }}
         />
       ) : (
-        <Box aria-hidden px={`${horizontalPadding}px`} {...sharedTextStyle}>
+        <Box aria-hidden px={`${horizontalPadding}px`} style={sharedTextStyle}>
           {displayText}
         </Box>
       )}

@@ -1,6 +1,7 @@
 import { Box, Flex } from '@chakra-ui/react'
 import { Fragment } from 'react'
 import { useHorizontalScrollGuard } from '../../hooks/useHorizontalScrollGuard'
+import { framesEditorPaddingTop } from '../../layout'
 import type { Platform, Screenshot } from '../../types'
 import type { GradientConfig } from '../../utils/featureGraphicConfig'
 import { PREVIEW_FORMAT_BY_PLATFORM } from '../../utils/exportFormats'
@@ -12,7 +13,7 @@ export interface FramesEditorProps {
   platform: Platform
   gradientConfig: GradientConfig
   showBezel: boolean
-  onReplace: (id: string, file: File) => void
+  onReplace: (id: string, file: File) => Promise<void> | void
   onDelete: (id: string) => void
   onSwap: (index: number) => void
   onTitleChange: (id: string, title: string) => void
@@ -36,15 +37,16 @@ export const FramesEditor = ({
   return (
     <Box
       ref={scrollRef}
-      alignItems="center"
       className="hide-scrollbar preview-scroll-strip"
       display="flex"
       flex="1"
       minH={0}
       overflowX="auto"
-      py={8}
+      overflowY="hidden"
+      pt={framesEditorPaddingTop}
+      pb={8}
     >
-      <Flex align="flex-start" flexShrink={0} gap={0} mx="auto" w="max-content">
+      <Flex align="center" flexShrink={0} gap={0} h="full" mx="auto" w="max-content">
         {screenshots.map((screenshot, index) => (
           <Fragment key={screenshot.id}>
             <ScreenshotFrame
@@ -56,7 +58,7 @@ export const FramesEditor = ({
               title={screenshot.title}
               titlePosition={screenshot.titlePosition}
               onReplace={(file) => {
-                onReplace(screenshot.id, file)
+                void onReplace(screenshot.id, file)
               }}
               onDelete={() => {
                 onDelete(screenshot.id)

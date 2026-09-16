@@ -44,6 +44,40 @@
     "import/exports-last": "off",
     "import/no-unassigned-import": "off",
     "eslint/no-duplicate-imports": "off",
-    "promise/avoid-new": "off"
-  }
+    "promise/avoid-new": "off",
+    "react/jsx-handler-names": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "eslint/require-await": "off",
+        "typescript/require-await": "off",
+        "import/no-namespace": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/array-type": "off"
+      }
+    },
+    {
+      "files": ["src/lib/sync/**/*.ts"],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/strict-boolean-expressions": "off",
+        "promise/prefer-await-to-then": "off",
+        "promise/always-return": "off",
+        "eslint/prefer-destructuring": "off",
+        "eslint/init-declarations": "off",
+        "typescript/prefer-promise-reject-errors": "off",
+        "typescript/restrict-template-expressions": "off",
+        "import/consistent-type-specifier-style": "off"
+      }
+    },
+    {
+      "files": ["src/components/EditorApp.tsx", "src/hooks/useWorkspace.ts"],
+      "rules": {
+        "import/max-dependencies": "off"
+      }
+    }
+  ]
 }

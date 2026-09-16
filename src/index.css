@@ -44,7 +44,7 @@ body,
   overscroll-behavior-x: none;
   padding-inline: calc((100vw - min(100vw, var(--main-content-max-width))) / 2 + 1.5rem);
   scroll-padding-inline: calc((100vw - min(100vw, var(--main-content-max-width))) / 2 + 1.5rem);
-  touch-action: pan-y pinch-zoom;
+  touch-action: pan-x pinch-zoom;
 }
 
 .gradient-hue-slider::-webkit-slider-runnable-track {

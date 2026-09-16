@@ -2,9 +2,10 @@ import type { RendererId } from '../../types'
 import type { GradientConfig } from '../featureGraphicConfig'
 import { featureGraphicGradient } from '../featureGraphicConfig'
 import { drawFeatureGraphic } from './featureGraphic'
-import { drawStoreScreenshot, type StoreScreenshotOptions } from './screenshot'
+import type { StoreScreenshotOptions } from './screenshot'
+import { drawStoreScreenshot } from './screenshot'
 
-export interface FramedScreenshotOptions extends StoreScreenshotOptions {}
+export type FramedScreenshotOptions = StoreScreenshotOptions
 
 export async function drawFramedScreenshot(
   renderer: RendererId,
