@@ -181,6 +181,24 @@ describe('workspaceReducer', () => {
     expect(next.syncedRevision).toBeNull()
   })
 
+  it('creates a project with frames selected first', () => {
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    const withFrames = workspaceReducer(createEmptySketch(), {
+      type: 'SELECT_FRAMES',
+      frames: [createFrame('a', 0), createFrame('b', 1)],
+    })
+    const project = workspaceReducer(withFrames, {
+      type: 'SET_PROJECT_META',
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'With shots',
+      ownerId: 'user-1',
+    })
+
+    expect(project.kind).toBe('project')
+    expect(project.frames.map((frame) => frame.id)).toEqual(['a', 'b'])
+    expect(project.revision).toBe(2)
+  })
+
   it('marks a revision as synced without bumping it', () => {
     const project = workspaceReducer(createEmptySketch(), {
       type: 'SET_PROJECT_META',

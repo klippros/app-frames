@@ -4,7 +4,8 @@ import { featureGraphicGradient } from '../utils/featureGraphicConfig'
 import { clearImageCache } from '../utils/loadImage'
 import { normalizeImageFile } from '../utils/normalizeImage'
 import { flushProjectSync, queueWorkspaceSave, stopProjectSync } from '../lib/sync/projectSync'
-import { createEmptySketch, type WorkspaceImageMeta } from '../workspace/types'
+import { createEmptySketch } from '../workspace/types'
+import type { WorkspaceImageMeta } from '../workspace/types'
 import {
   frameToScreenshot,
   screenshotToFrame,
@@ -128,16 +129,29 @@ export const useWorkspace = () => {
   }, [])
 
   const promoteToProject = useCallback(
-    async (name: string, ownerId: string) => {
+    async (name: string, ownerId: string, initialScreenshots?: Screenshot[]) => {
       const projectId = crypto.randomUUID()
-      const action = {
+      let next = workspace
+
+      if (initialScreenshots !== undefined) {
+        const selectAction = {
+          type: 'SELECT_FRAMES' as const,
+          frames: initialScreenshots.map((screenshot, index) =>
+            screenshotToFrame(screenshot, index),
+          ),
+        }
+        next = workspaceReducer(next, selectAction)
+        dispatch(selectAction)
+      }
+
+      const metaAction = {
         type: 'SET_PROJECT_META' as const,
         id: projectId,
         name,
         ownerId,
       }
-      const next = workspaceReducer(workspace, action)
-      dispatch(action)
+      next = workspaceReducer(next, metaAction)
+      dispatch(metaAction)
       const frameImages = await queueWorkspaceSave(ownerId, next)
       await flushProjectSync()
       dispatch({ type: 'MARK_SYNCED', revision: next.revision, frameImages })

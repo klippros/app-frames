@@ -10,6 +10,8 @@ export interface ScreenshotWorkspaceProps {
   platform: Platform
   gradientConfig: GradientConfig
   showBezel: boolean
+  /** True on /sketch or /projects/:id — editor only shows on editing routes. */
+  isEditingRoute: boolean
   projectsListKey?: number
   openingProjectId?: string | null
   onSelect: (screenshots: Screenshot[]) => void
@@ -19,7 +21,7 @@ export interface ScreenshotWorkspaceProps {
   onTitleChange: (id: string, title: string) => void
   onToggleTitlePosition: (id: string) => void
   onOpenProject: (projectId: string) => void
-  onCreateProject: () => void
+  onCreateProject: (name: string, screenshots: Screenshot[]) => Promise<void> | void
 }
 
 export const ScreenshotWorkspace = ({
@@ -27,6 +29,7 @@ export const ScreenshotWorkspace = ({
   platform,
   gradientConfig,
   showBezel,
+  isEditingRoute,
   projectsListKey = 0,
   openingProjectId = null,
   onSelect,
@@ -39,7 +42,7 @@ export const ScreenshotWorkspace = ({
   onCreateProject,
 }: ScreenshotWorkspaceProps) => (
   <Flex direction="column" flex="1" minH={0} w="full">
-    {screenshots.length > 0 ? (
+    {isEditingRoute && screenshots.length > 0 ? (
       <FramesEditor
         screenshots={screenshots}
         platform={platform}
@@ -52,7 +55,7 @@ export const ScreenshotWorkspace = ({
         onToggleTitlePosition={onToggleTitlePosition}
       />
     ) : (
-      <MainContent>
+      <MainContent align="start">
         <WelcomeScreen
           projectsListKey={projectsListKey}
           openingProjectId={openingProjectId}

@@ -10,7 +10,6 @@ export interface EditorDialogsProps {
   saveOpen: boolean
   postExportOpen: boolean
   signInOpen: boolean
-  hasScreenshots: boolean
   onExportOpenChange: (open: boolean) => void
   onSaveOpenChange: (open: boolean) => void
   onPostExportOpenChange: (open: boolean) => void
@@ -25,7 +24,6 @@ export const EditorDialogs = ({
   saveOpen,
   postExportOpen,
   signInOpen,
-  hasScreenshots,
   onExportOpenChange,
   onSaveOpenChange,
   onPostExportOpenChange,
@@ -43,11 +41,7 @@ export const EditorDialogs = ({
         open={saveOpen}
         onOpenChange={onSaveOpenChange}
         onConfirm={onSaveConfirm}
-        description={
-          hasScreenshots
-            ? 'Give this sketch a name to keep it in your account.'
-            : 'Create an empty named project you can fill with screenshots.'
-        }
+        description="Give this sketch a name to keep it in your account."
       />
       <PostExportSaveDialog
         open={postExportOpen}

@@ -12,8 +12,9 @@ export interface UseEditorActionsArgs {
   showBezel: boolean
   isConfigured: boolean
   hasScreenshots: boolean
-  promoteToProject: (name: string, ownerId: string) => Promise<string>
+  promoteToProject: (name: string, ownerId: string, screenshots?: Screenshot[]) => Promise<string>
   openProject: (projectId: string) => void
+  allowNextNavigation: () => void
   onExportedSketch: () => void
 }
 
@@ -26,6 +27,7 @@ export const useEditorActions = ({
   hasScreenshots,
   promoteToProject,
   openProject,
+  allowNextNavigation,
   onExportedSketch,
 }: UseEditorActionsArgs) => {
   const { user } = useAuth()
@@ -49,14 +51,15 @@ export const useEditorActions = ({
   )
 
   const handleSaveAsProject = useCallback(
-    async (name: string) => {
+    async (name: string, nextScreenshots?: Screenshot[]) => {
       if (!user) {
         throw new Error('Sign in to save a project.')
       }
-      const projectId = await promoteToProject(name, user.id)
+      const projectId = await promoteToProject(name, user.id, nextScreenshots)
+      allowNextNavigation()
       openProject(projectId)
     },
-    [openProject, promoteToProject, user],
+    [allowNextNavigation, openProject, promoteToProject, user],
   )
 
   const handleOpenProject = useCallback(

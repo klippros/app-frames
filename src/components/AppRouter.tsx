@@ -12,6 +12,7 @@ const router = createBrowserRouter(
       element: <App />,
       children: [
         { index: true, element: null },
+        { path: 'sketch', element: null },
         { path: 'projects/:projectId', element: null },
       ],
     },

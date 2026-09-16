@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from './authContext'
 import { AuthStatus } from '../types/auth'
 import { hydrateProjectWorkspace } from '../lib/sync/projectSync'
 import { supabaseClient } from '../lib/supabase/client'
 import { isProjectId, projectPath } from '../lib/projectPath'
+import { SKETCH_PATH, isSketchPath } from '../lib/sketchPath'
 import type { Workspace } from '../workspace/types'
 
 export const useProjectRoute = (
@@ -14,19 +15,25 @@ export const useProjectRoute = (
 ) => {
   const { projectId: rawProjectId } = useParams<{ projectId?: string }>()
   const routeProjectId = isProjectId(rawProjectId) ? rawProjectId : undefined
+  const location = useLocation()
+  const isSketchRoute = isSketchPath(location.pathname)
+  const isHomeRoute = routeProjectId === undefined && !isSketchRoute
   const navigate = useNavigate()
   const { user, authStatus } = useAuth()
   const [routeError, setRouteError] = useState<string | null>(null)
   const [isOpening, setIsOpening] = useState(false)
   const loadingIdRef = useRef<string | null>(null)
   const previousRouteProjectId = useRef<string | undefined>(routeProjectId)
+  const previousIsSketchRoute = useRef(isSketchRoute)
   const activeWorkspaceId = workspace.kind === 'project' ? workspace.id : null
 
-  // URL is the source of truth: hydrate on project routes, clear when leaving them.
+  // URL is the source of truth: hydrate on project routes, clear when leaving editor routes.
   useEffect(() => {
     const leftProjectRoute =
       previousRouteProjectId.current !== undefined && routeProjectId === undefined
+    const leftSketchRoute = previousIsSketchRoute.current && !isSketchRoute
     previousRouteProjectId.current = routeProjectId
+    previousIsSketchRoute.current = isSketchRoute
 
     if (rawProjectId !== undefined && routeProjectId === undefined) {
       setRouteError('Invalid project link.')
@@ -34,10 +41,17 @@ export const useProjectRoute = (
       return undefined
     }
 
-    if (routeProjectId === undefined) {
-      if (leftProjectRoute) {
+    if (isHomeRoute) {
+      if (leftProjectRoute || leftSketchRoute) {
         resetWorkspace()
       }
+      setRouteError(null)
+      loadingIdRef.current = null
+      setIsOpening(false)
+      return undefined
+    }
+
+    if (isSketchRoute) {
       setRouteError(null)
       loadingIdRef.current = null
       setIsOpening(false)
@@ -102,6 +116,8 @@ export const useProjectRoute = (
   }, [
     activeWorkspaceId,
     authStatus,
+    isHomeRoute,
+    isSketchRoute,
     loadWorkspace,
     navigate,
     rawProjectId,
@@ -117,10 +133,17 @@ export const useProjectRoute = (
     [navigate],
   )
 
+  const openSketch = useCallback(() => {
+    void navigate(SKETCH_PATH)
+  }, [navigate])
+
   return {
     routeProjectId,
+    isSketchRoute,
+    isHomeRoute,
     routeError,
     isOpening,
     openProject,
+    openSketch,
   }
 }

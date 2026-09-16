@@ -8,6 +8,7 @@ import { useProjectRoute } from '../hooks/useProjectRoute'
 import { useWorkspace } from '../hooks/useWorkspace'
 import { footerHeight } from '../layout'
 import { SyncStatus } from '../lib/sync/projectSync'
+import type { Screenshot } from '../types'
 import { AuthStatus } from '../types/auth'
 import { AppHeader } from './AppHeader'
 import { EditorDialogs } from './EditorDialogs'
@@ -20,11 +21,19 @@ export const EditorApp = () => {
   const { authStatus, isConfigured } = useAuth()
   const dialogs = useEditorDialogState()
   const [projectsListKey, setProjectsListKey] = useState(0)
-  const { routeError, isOpening, openProject, routeProjectId } = useProjectRoute(
-    workspace,
-    workspaceState.loadWorkspace,
-    workspaceState.resetWorkspace,
+  const { routeError, isOpening, openProject, openSketch, routeProjectId, isSketchRoute } =
+    useProjectRoute(workspace, workspaceState.loadWorkspace, workspaceState.resetWorkspace)
+
+  const hasUnsyncedProject =
+    workspace.kind === 'project' && workspace.revision !== workspace.syncedRevision
+  const hasUnsavedSketch = workspace.kind === 'sketch' && hasScreenshots
+  const isActivelySyncing = syncStatus === SyncStatus.Syncing
+  const syncFailed = syncStatus === SyncStatus.Error || syncStatus === SyncStatus.Conflict
+
+  const { allowNextNavigation } = useLeaveProtection(
+    hasUnsavedSketch || hasUnsyncedProject || isActivelySyncing || syncFailed,
   )
+
   const { handleExport, handleSaveAsProject, handleOpenProject } = useEditorActions({
     workspace,
     screenshots: workspaceState.screenshots,
@@ -34,21 +43,25 @@ export const EditorApp = () => {
     hasScreenshots,
     promoteToProject: workspaceState.promoteToProject,
     openProject,
+    allowNextNavigation,
     onExportedSketch: () => {
       dialogs.setPostExportOpen(true)
     },
   })
 
-  const hasUnsyncedProject =
-    workspace.kind === 'project' && workspace.revision !== workspace.syncedRevision
-  const hasUnsavedSketch = workspace.kind === 'sketch' && hasScreenshots
-  const isActivelySyncing = syncStatus === SyncStatus.Syncing
-  const syncFailed = syncStatus === SyncStatus.Error || syncStatus === SyncStatus.Conflict
-
-  useLeaveProtection(hasUnsavedSketch || hasUnsyncedProject || isActivelySyncing || syncFailed)
-
   const isSketch = workspace.kind === 'sketch'
   const showSaveProject = isConfigured && hasScreenshots && isSketch
+  const isEditingRoute = isSketchRoute || routeProjectId !== undefined
+
+  const handleStartSketch = (screenshots: Screenshot[]) => {
+    workspaceState.selectScreenshots(screenshots)
+    openSketch()
+  }
+
+  const handleCreateProject = async (name: string, screenshots: Screenshot[]) => {
+    await handleSaveAsProject(name, screenshots)
+    setProjectsListKey((key) => key + 1)
+  }
 
   return (
     <Box display="flex" flexDirection="column" h="100dvh" overflow="hidden" position="relative">
@@ -100,18 +113,17 @@ export const EditorApp = () => {
           platform={workspaceState.platform}
           gradientConfig={workspaceState.gradientConfig}
           showBezel={workspaceState.showBezel}
+          isEditingRoute={isEditingRoute}
           projectsListKey={projectsListKey}
           openingProjectId={isOpening ? (routeProjectId ?? null) : null}
-          onSelect={workspaceState.selectScreenshots}
+          onSelect={handleStartSketch}
           onReplace={workspaceState.replaceScreenshot}
           onDelete={workspaceState.deleteScreenshot}
           onSwap={workspaceState.swapScreenshots}
           onTitleChange={workspaceState.setTitle}
           onToggleTitlePosition={workspaceState.toggleTitlePosition}
           onOpenProject={handleOpenProject}
-          onCreateProject={() => {
-            dialogs.setSaveDialogOpen(true)
-          }}
+          onCreateProject={handleCreateProject}
         />
       </Box>
 
@@ -122,7 +134,6 @@ export const EditorApp = () => {
         saveOpen={dialogs.saveDialogOpen}
         postExportOpen={dialogs.postExportOpen}
         signInOpen={dialogs.signInOpen}
-        hasScreenshots={hasScreenshots}
         onExportOpenChange={dialogs.setExportModalOpen}
         onSaveOpenChange={dialogs.setSaveDialogOpen}
         onPostExportOpenChange={dialogs.setPostExportOpen}

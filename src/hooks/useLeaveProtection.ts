@@ -1,10 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useBlocker } from 'react-router-dom'
 
 const LEAVE_MESSAGE = 'You have unsaved changes that are not synced yet. Leave anyway?'
 
+export interface LeaveProtectionControls {
+  /** Allow the next in-app navigation without the confirm prompt (e.g. after save). */
+  allowNextNavigation: () => void
+}
+
 /** Block tab close and in-app navigation while local edits are at risk. */
-export const useLeaveProtection = (enabled: boolean) => {
+export const useLeaveProtection = (enabled: boolean): LeaveProtectionControls => {
+  const allowNextNavRef = useRef(false)
+
   useEffect(() => {
     if (!enabled) {
       return undefined
@@ -23,10 +30,13 @@ export const useLeaveProtection = (enabled: boolean) => {
     }
   }, [enabled])
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      enabled && currentLocation.pathname !== nextLocation.pathname,
-  )
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (allowNextNavRef.current) {
+      allowNextNavRef.current = false
+      return false
+    }
+    return enabled && currentLocation.pathname !== nextLocation.pathname
+  })
 
   useEffect(() => {
     if (blocker.state !== 'blocked') {
@@ -40,4 +50,10 @@ export const useLeaveProtection = (enabled: boolean) => {
 
     blocker.reset()
   }, [blocker])
+
+  return {
+    allowNextNavigation: () => {
+      allowNextNavRef.current = true
+    },
+  }
 }
